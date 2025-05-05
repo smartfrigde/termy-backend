@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\Controller;
 
 use App\Services\TokenService;
 
@@ -58,22 +59,32 @@ class UserController extends Controller
         ]);
     }
 
-    // public function refresh(Request $request)
-    // {
-    //     $request->validate([
-    //         'refresh_token' => 'required|string',
-    //     ]);
+    public function refresh(Request $request)
+    {
+        $request->validate([
+            'refresh_token' => 'required|string',
+        ]);
 
-    //     $refreshToken = $request->input('refresh_token');
+        $refreshToken = $request->input('refresh_token');
 
-    //     if (!$user) {
-    //         return response()->json(['error' => 'Invalid refresh token'], 401);
-    //     }
+        if (!$this->tokenService->isRefreshToken($refreshToken)) {
+            return response()->json(['error' => 'This is token is invalid or expiries'], 403);
+        }
 
-    //     $newApiToken = $this->tokenService->generateApiToken($user);
+        $user = $this->tokenService->getTokensOwner($refreshToken);
 
-    //     return response()->json([
-    //         'api_token' => $newApiToken,
-    //     ]);
-    // }
+        if (!$user) {
+            return response()->json(['error' => 'Invalid refresh token'], 403);
+        }
+
+        $apiToken = $this->tokenService->generateApiToken($user);
+        $refreshToken = $this->tokenService->generateRefreshToken($user);
+
+        $this->tokenService->decodeAndRevokeToken($refreshToken);
+
+        return response()->json([
+            'api_token' => $apiToken,
+            'refresh_token' => $refreshToken,
+        ]);
+    }
 }

@@ -38,20 +38,65 @@ class TokenService
             return null;
         }
 
-        return $personalAccessToken->tokenable;
+        return $personalAccessToken;
     }
 
-    public function isTokenExpired($token)
+    public function isTokenExpired($personalAccessToken)
     {
-        return $token->expires_at && Carbon::now()->greaterThan($token->expires_at);
+        if (!$personalAccessToken) {
+            return true;
+        }
+
+        $isExp = Carbon::now() >= $personalAccessToken->expires_at;
+
+        return $isExp;
     }
 
-    public function revokeToken($token)
+    public function decodeAndRevokeToken($token)
     {
         $personalAccessToken = PersonalAccessToken::findToken($token);
 
         if ($personalAccessToken) {
             $personalAccessToken->delete();
         }
+    }
+
+    public function revokeToken($personalAccessToken)
+    {
+        if ($personalAccessToken && $personalAccessToken instanceof PersonalAccessToken) {
+            $personalAccessToken->delete();
+        }
+    }
+
+    public function getTokensOwner($token)
+    {
+        $personalAccessToken = PersonalAccessToken::findToken($token);
+
+        if (!$personalAccessToken || $this->isTokenExpired($personalAccessToken)) {
+            return null;
+        }
+
+        return $personalAccessToken->tokenable;
+    }
+
+    public function isAPIToken($token)
+    {
+        $personalAccessToken = PersonalAccessToken::findToken($token);
+
+        if ($personalAccessToken && !$this->isTokenExpired($personalAccessToken)) {
+            return $personalAccessToken->name === 'api_token';
+        }
+        return null;
+
+    }
+    public function isRefreshToken($token)
+    {
+        $personalAccessToken = PersonalAccessToken::findToken($token);
+
+        if ($personalAccessToken && !$this->isTokenExpired($personalAccessToken)) {
+            return $personalAccessToken->name === 'refresh_token';
+        }
+
+        return null;
     }
 }

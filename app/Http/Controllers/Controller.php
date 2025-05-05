@@ -17,4 +17,13 @@ abstract class Controller
     {
         return $this->tokenService->generateApiToken($user);
     }
+
+    protected function getUserFromApiToken($token)
+    {
+        if ($this->tokenService->isAPIToken($token)){
+            $this->tokenService->getTokensOwner($token);
+        }
+
+        return null;
+    }
 }
