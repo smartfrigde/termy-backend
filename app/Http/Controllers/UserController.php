@@ -87,4 +87,54 @@ class UserController extends Controller
             'refresh_token' => $refreshToken,
         ]);
     }
+
+    public function update(Request $request, $id)
+    {
+        $authUser = $this->getUserFromToken($request);
+
+        if ($authUser->id !== (int) $id) {
+            return response()->json(['error' => 'Unauthorized id'], 403);
+        }
+
+        $request->validate([
+            'name' => 'string|max:255',
+            'surname' => 'string|max:255',
+            'email' => 'string|email|max:255|unique:users,email',
+            'password' => 'string|min:8',
+        ]);
+
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        $user->update([
+            'name' => $request->input('name', $user->name),
+            'surname' => $request->input('surname', $user->surname),
+            'email' => $request->input('email', $user->email),
+            'password' => $request->has('password') ? bcrypt($request->password) : $user->password,
+        ]);
+
+        return response()->json(['user' => $user], 200);
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $authUser = $this->getUserFromToken(request());
+
+        if ($authUser->id !== $id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        $user->delete();
+
+        return response()->json(['message' => 'User deleted successfully'], 200);
+    }
 }

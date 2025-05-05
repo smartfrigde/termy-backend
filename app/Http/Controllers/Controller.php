@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\TokenService;
+use Illuminate\Http\Request;
 
 abstract class Controller
 {
@@ -18,10 +19,12 @@ abstract class Controller
         return $this->tokenService->generateApiToken($user);
     }
 
-    protected function getUserFromApiToken($token)
+    protected function getUserFromToken(Request $request)
     {
-        if ($this->tokenService->isAPIToken($token)){
-            $this->tokenService->getTokensOwner($token);
+        $token = $request->bearerToken();
+
+        if ($token) {
+            return $this->tokenService->getTokensOwner($token);
         }
 
         return null;
