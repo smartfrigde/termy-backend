@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->longText('profile_image')->nullable()->default(null)->comment('The profile image of the user');
             $table->timestamps();
         });
     }

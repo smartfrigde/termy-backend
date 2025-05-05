@@ -1,9 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UserController;
 
-Route::get('/', function () {
-    return ['Laravel' => app()->version()];
+Route::get('/user', function () {
+    return response()->json([
+        'message' => 'Welcome to the API',
+    ]);
 });
 
-require __DIR__.'/auth.php';
+Route::post('/users', [UserController::class, 'store'])->name('users.store');
+Route::post('/login', [UserController::class, 'login'])->name('login');
