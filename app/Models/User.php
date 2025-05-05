@@ -45,4 +45,22 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::creating(function (self $user) {
+            Teams::create([
+                "user_id" => $user->id,
+                "name" => "default_team_of{$user->id}",
+                "type" => "default_user_team",
+            ]);
+
+            synchronizationVersions::create([
+                "user_id" => $user->id,
+                "version" => 0,
+            ]);
+        });
+    }
 }
