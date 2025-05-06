@@ -149,16 +149,99 @@ class SshController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, sshConnections $sshConnections)
+    public function update(Request $request, $sshId)
     {
-        //
+        $sshData = $request->validate([
+            'login' => 'nullable|string|max:255',
+            'hostname' => 'nullable|string|max:512',
+            'port' => 'nullable|integer',
+            'name' => 'nullable|string|max:255',
+            'password' => 'nullable|string|max:255',
+            'team_id' => 'nullable|exists:teams,id',
+        ]);
+
+        $gpgKeyData = $request->validate([
+            'private_key' => 'nullable|string',
+            'public_key' => 'nullable|string',
+        ]);
+
+        $authUser = $this->getUserFromToken($request);
+
+        $sshConnection = sshConnections::find($sshId);
+
+        if (!$sshConnection) {
+            return response()->json(['error' => "SSH connection not found"], 404);
+        }
+
+        $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
+            ->where('team_id', $sshConnection->team_id)
+            ->first();
+
+        if (!$userInTeam) {
+            return response()->json(['error' => "User isn't a team member"], 403);
+        }
+
+        if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
+            return response()->json(['error' => "Permission denied"], 403);
+        }
+
+        $sshConnection->update($sshData);
+
+        if (isset($gpgKeyData['public_key']) || isset($gpgKeyData['private_key'])) {
+            $gpgKey = $sshConnection->gpgKey;
+
+            if ($gpgKey) {
+                $gpgKey->update([
+                    'private_key' => $gpgKeyData['private_key'] ?? $gpgKey->private_key,
+                    'public_key' => $gpgKeyData['public_key'] ?? $gpgKey->public_key,
+                ]);
+            } else {
+                GpgKeys::create([
+                    'private_key' => $gpgKeyData['private_key'] ?? null,
+                    'public_key' => $gpgKeyData['public_key'] ?? null,
+                    'ssh_connection_id' => $sshConnection->id,
+                ]);
+            }
+        }
+
+        $this->clearCache($authUser->id,  isset($sshData["team_id"]) ? $sshData['team_id'] : $sshConnection->team_id, 30);
+
+        return response()->json([
+            "ssh_connection" => $sshConnection,
+            "message" => "SSH connection updated successfully",
+        ], 200);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(sshConnections $sshConnections)
+    public function destroy($sshConnectionsId, Request $request)
     {
-        //
+        $sshConnection = sshConnections::findOrFail($sshConnectionsId);
+        if (!$sshConnection) {
+            return response()->json(['error' => "SSH connection not found"], 404);
+        }
+
+        $authUser = $this->getUserFromToken($request);
+
+        $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
+            ->where('team_id', $sshConnection->team_id)
+            ->first();
+
+        if (!$userInTeam) {
+            return response()->json(['error' => "User isn't a team member"], 403);
+        }
+
+        if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
+            return response()->json(['error' => "Permission denied"], 403);
+        }
+
+        $userInTeam->update(['revoked' => true]);
+
+        $this->clearCache($authUser->id, $sshConnection->team_id, 30);
+
+        return response()->json([
+            "message" => "SSH connection revoked successfully",
+        ], 200);
     }
 }
