@@ -30,7 +30,7 @@ Route::middleware(AuthenticatedWithToken::class)->group(function () {
     // team members endpoints
     // -----------------------
     Route::prefix("teams/{teamId}/members")->group(function () {
-        // Route::post('/', [TeamController::class, 'addMember'])->name('teams.members.store');
+        Route::post('/', [TeamController::class, 'addMember'])->name('teams.members.store');
         Route::get('/', [TeamController::class, 'getMembers'])->name('teams.members.index');
         Route::patch('/{id}', [TeamController::class, 'updateMember'])->name('teams.members.update');
         Route::delete('/{id}', [TeamController::class, 'removeMember'])->name('teams.members.destroy');

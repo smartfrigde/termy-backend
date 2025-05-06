@@ -18,15 +18,15 @@ class Teams extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function scopeWithoutRevoked()
+    public function scopeWithoutRevoked($query)
     {
-        return $this->where('revoked', false);
+        return $query->where('revoked', false);
     }
 
-    public function scopeByMemberId($userId)
+    public function scopeByMemberId($query, $userId)
     {
-        return $this->whereHas('members', function ($query) use ($userId) {
-            $query->where('user_id', $userId);
+        return $query->whereHas('members', function ($subQuery) use ($userId) {
+            $subQuery->where('user_id', $userId);
         });
     }
 

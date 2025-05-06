@@ -23,10 +23,11 @@ class TeamsMembers extends Model
     {
         return $this->belongsTo(Teams::class);
     }
-    public function scopeWithoutRevoked()
+    public function scopeWithoutRevoked($query)
     {
-        return $this->where('revoked', false);
+        return $query->where('revoked', false);
     }
+
     public function scopeOfTeam($query, $teamId)
     {
         return $query->where('team_id', $teamId);
