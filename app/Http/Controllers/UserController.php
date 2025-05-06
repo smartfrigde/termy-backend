@@ -68,7 +68,7 @@ class UserController extends Controller
         $refreshToken = $request->input('refresh_token');
 
         if (!$this->tokenService->isRefreshToken($refreshToken)) {
-            return response()->json(['error' => 'This is token is invalid or expiries'], 403);
+            return response()->json(['error' => 'This token is invalid or expiries'], 403);
         }
 
         $user = $this->tokenService->getTokensOwner($refreshToken);
@@ -78,13 +78,13 @@ class UserController extends Controller
         }
 
         $apiToken = $this->tokenService->generateApiToken($user);
-        $refreshToken = $this->tokenService->generateRefreshToken($user);
+        $newRefreshToken = $this->tokenService->generateRefreshToken($user);
 
         $this->tokenService->decodeAndRevokeToken($refreshToken);
 
         return response()->json([
             'api_token' => $apiToken,
-            'refresh_token' => $refreshToken,
+            'refresh_token' => $newRefreshToken,
         ]);
     }
 

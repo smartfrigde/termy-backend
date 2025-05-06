@@ -47,7 +47,7 @@ return [
     |
     */
 
-    'expiration' => 15, // 15 minutes
+    'expiration' => 60, // 15 minutes
     'refresh_token_expiration' => 43200, // 14 days
 
     /*

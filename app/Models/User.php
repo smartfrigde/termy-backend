@@ -87,4 +87,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(synchronizationVersions::class, "user_id", "id");
     }
+
+    public function getDefaultTeamAttribute()
+    {
+        return $this->team()->where("type", "default_user_team")->first();
+    }
 }

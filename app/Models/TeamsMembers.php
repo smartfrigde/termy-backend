@@ -23,7 +23,7 @@ class TeamsMembers extends Model
     {
         return $this->belongsTo(Teams::class);
     }
-    public function withoutRevoked()
+    public function scopeWithoutRevoked()
     {
         return $this->where('revoked', false);
     }
