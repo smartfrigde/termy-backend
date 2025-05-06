@@ -63,7 +63,7 @@ class User extends Authenticatable
             TeamsMembers::create([
                 "user_id" => $user->id,
                 "team_id" => $team->id,
-                "permission_level_id" => TeamRole::MEMBER,
+                "permission_level_id" => TeamRole::ADMINISTRATOR->value,
             ]);
 
             synchronizationVersions::create([
@@ -91,5 +91,10 @@ class User extends Authenticatable
     public function getDefaultTeamAttribute()
     {
         return $this->team()->where("type", "default_user_team")->first();
+    }
+
+    public function isTeamMember($teamId)
+    {
+        return $this->teamRole()->where("team_id", $teamId)->exists();
     }
 }

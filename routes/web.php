@@ -5,6 +5,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeamController;
 use App\Http\Middleware\AuthenticatedWithToken;
 use Illuminate\Auth\Middleware\Authenticate;
+use App\Http\Controllers\SshController;
 
 Route::post('/users', [UserController::class, 'store'])->name('users.store');
 Route::post('/login', [UserController::class, 'login'])->name('login');
@@ -34,5 +35,12 @@ Route::middleware(AuthenticatedWithToken::class)->group(function () {
         Route::get('/', [TeamController::class, 'getMembers'])->name('teams.members.index');
         Route::patch('/{id}', [TeamController::class, 'updateMember'])->name('teams.members.update');
         Route::delete('/{id}', [TeamController::class, 'removeMember'])->name('teams.members.destroy');
+    });
+
+    Route::prefix("ssh")->group(function () {
+        Route::post('/', [SshController::class, 'store'])->name('ssh.store');
+        Route::get('/', [SshController::class, 'index'])->name('ssh.index');
+        Route::patch('/{id}', [SshController::class, 'update'])->name('ssh.update');
+        Route::delete('/{id}', [SshController::class, 'destroy'])->name('ssh.destroy');
     });
 });
