@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Sprawdź, czy docker-compose jest dostępne
+composer install
+
 if command -v docker-compose &> /dev/null; then
     echo "Using docker-compose"
     docker-compose up --build
@@ -12,6 +13,5 @@ else
     exit 1
 fi
 
-./startup.sh
 echo "Starting the application..."
 
