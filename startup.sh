@@ -4,8 +4,8 @@ read docker
 
 if [ "$docker" = "y" ]; then
     echo "Starting docker container..."
-    sudo docker start backedn-laravel-1
-    sudo docker start backedn-mysql-1
+    sudo docker start termy-laravel
+    sudo docker start termy-mysql
 else
     echo "Starting local server..."
     python3 -m http.server 8080
@@ -17,7 +17,7 @@ read migrate
 if [ "$migrate" = "y" ]; then
     if [ "$docker" = "y" ]; then
         echo "Running migrations in docker..."
-        sudo docker exec -it backedn-laravel-1 php artisan migrate
+        sudo docker exec -it termy-laravel php artisan migrate
     else
         echo "Running migrations locally..."
         php artisan migrate
@@ -33,7 +33,7 @@ fi
 
 if [ "$console" = "y" ]; then
     echo "Running docker container..."
-    sudo docker exec -it backedn-laravel-1 bash
+    sudo docker exec -it termy-laravel bash
 else
     echo "Running local server..."
     php artisan serve

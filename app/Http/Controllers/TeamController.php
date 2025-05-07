@@ -110,8 +110,10 @@ class TeamController extends Controller
 
         $this->clearCache($authUser->id, $team);
 
+        $createdTeam = Teams::find($team->id);
+
         return response()->json([
-            'team' => $team,
+            'team' => $createdTeam,
         ], 201);
     }
 
@@ -140,8 +142,14 @@ class TeamController extends Controller
             return response()->json(['error' => 'Team not found'], 404);
         }
 
+        $totalItems = Teams::withoutRevoked()->byMemberId($authUser->id)->count();
+        $totalPages = (int) ceil($totalItems / 30);
+        $teamPage = $this->calculatePageForTeam($team->id, $authUser->id, 30);
+
         return response()->json([
             'team' => $team,
+            "total_pages" => $totalPages,
+            "current_page" => $teamPage,
         ], 200);
     }
 

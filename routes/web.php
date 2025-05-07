@@ -6,8 +6,10 @@ use App\Http\Controllers\TeamController;
 use App\Http\Middleware\AuthenticatedWithToken;
 use Illuminate\Auth\Middleware\Authenticate;
 use App\Http\Controllers\SshController;
+use App\Http\Middleware\BypassCsrfMiddleware;
 
-Route::post('/users', [UserController::class, 'store'])->name('users.store');
+Route::middleware(BypassCsrfMiddleware::class)->group(function () {
+    Route::post('/users', [UserController::class, 'store'])->name('users.store');
 Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/refresh-token', [UserController::class,'refresh'])->name('refresh-token');
 
@@ -43,4 +45,5 @@ Route::middleware(AuthenticatedWithToken::class)->group(function () {
         Route::patch('/{id}', [SshController::class, 'update'])->name('ssh.update');
         Route::delete('/{id}', [SshController::class, 'destroy'])->name('ssh.destroy');
     });
+});
 });

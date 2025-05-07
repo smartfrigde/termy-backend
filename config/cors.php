@@ -15,20 +15,20 @@ return [
     |
     */
 
-    'paths' => ['*'],
+    'paths' => ['/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['*'], // Zezwala na dostęp z dowolnej domeny
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => ['*'],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => ['*'], // Zezwala na wszystkie nagłówki, w tym Authorization
 
     'exposed_headers' => [],
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    'supports_credentials' => false,
 
 ];
