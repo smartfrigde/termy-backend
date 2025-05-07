@@ -15,6 +15,7 @@ class sshConnections extends Model
         'name',
         'password',
         'team_id',
+        'revoked',
     ];
 
     public function team()
@@ -33,5 +34,10 @@ class sshConnections extends Model
     public function scopeWithoutRevoked($query)
     {
         return $query->where('revoked', false);
+    }
+
+    public function onlyRevoked()
+    {
+        return $this->where('revoked', true);
     }
 }

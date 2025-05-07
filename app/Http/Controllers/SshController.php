@@ -17,13 +17,18 @@ class SshController extends Controller
         Cache::forget("ssh_connections_{$userId}_{$teamId}_total_pages_per_page{$perPage}");
 
         $page = $this->calculatePageForShhConnection($teamId, $userId, $perPage);
+        $pageWithRevoked = $this->calculatePageForShhConnection($teamId, $userId, $perPage, true);
 
         if ($page !== null) {
             Cache::forget("ssh_connections_{$userId}_{$page}_{$perPage}");
         }
+
+        if ($pageWithRevoked !== null) {
+            Cache::forget("ssh_connections_{$userId}_{$pageWithRevoked}_{$perPage}_with_revoked");
+        }
     }
 
-    private function calculatePageForShhConnection($teamId, $authUserId, $perPage = 30)
+    private function calculatePageForShhConnection($sshConnectionId, $teamId, $authUserId, $perPage = 30, $getRevoked = false)
     {
         $teams = Teams::byMemberId($authUserId)
             ->withoutRevoked()
@@ -31,13 +36,27 @@ class SshController extends Controller
             ->pluck("id")
             ->toArray();
 
-        $teamIndex = array_search($teamId, $teams);
+        if ($getRevoked) {
+            $sshConnectionsIds = sshConnections::onlyRevoked()
+                ->where('team_id', $teamId)
+                ->orderBy('created_at', 'desc')
+                ->pluck("id")
+                ->toArray();
+        } else {
+            $sshConnectionsIds = sshConnections::withoutRevoked()
+                ->where('team_id', $teamId)
+                ->orderBy('created_at', 'desc')
+                ->pluck("id")
+                ->toArray();
+        }
 
-        if ($teamIndex === false) {
+        $sshIndex = array_search($sshConnectionId, $sshConnectionsIds);
+
+        if ($sshIndex  === false) {
             return null;
         }
 
-        $page = (int) ceil(($teamIndex + 1) / $perPage);
+        $page = (int) ceil(($sshIndex + 1) / $perPage);
 
         return $page;
     }
@@ -55,6 +74,7 @@ class SshController extends Controller
         $perPage = $request->input("per_page", 30);
         $teamId = $request->input("team_id", null);
         $offset = ($page - 1) * $perPage;
+        $getRevoked = $request->input("get_revoked", false);
 
         if (!$teamId) {
             $defaultTeam = Teams::where('type', 'default_user_team')
@@ -70,14 +90,25 @@ class SshController extends Controller
             $teamId = $defaultTeam->id;
         }
 
-        $sshServers = Cache::remember("ssh_connections_{$authUser->id}_{$page}_{$perPage}", 120, function () use ($authUser, $teamId, $perPage, $offset) {
-            return sshConnections::withoutRevoked()->with('gpgKey')
-                ->where('team_id', $teamId)
-                ->orderBy('created_at','desc')
-                ->offset($offset)
-                ->limit($perPage)
-                ->get();
-        });
+        if ($getRevoked) {
+            $sshServers = Cache::remember("ssh_connections_{$authUser->id}_{$page}_{$perPage}_with_revoked", 120, function () use ($authUser, $teamId, $perPage, $offset) {
+                return sshConnections::onlyRevoked()->with('gpgKey')
+                    ->where('team_id', $teamId)
+                    ->orderBy('created_at', 'desc')
+                    ->offset($offset)
+                    ->limit($perPage)
+                    ->get();
+            });
+        } else {
+            $sshServers = Cache::remember("ssh_connections_{$authUser->id}_{$page}_{$perPage}", 120, function () use ($authUser, $teamId, $perPage, $offset) {
+                return sshConnections::withoutRevoked()->with('gpgKey')
+                    ->where('team_id', $teamId)
+                    ->orderBy('created_at', 'desc')
+                    ->offset($offset)
+                    ->limit($perPage)
+                    ->get();
+            });
+        }
 
         $totalPages = Cache::remember("ssh_connections_{$authUser->id}_{$teamId}_total_pages_per_page{$perPage}", 120, function () use ($authUser, $teamId, $perPage) {
             return ceil(sshConnections::withoutRevoked()->where('team_id', $teamId)->count() / $perPage);
@@ -88,7 +119,6 @@ class SshController extends Controller
             "total_pages" => $totalPages,
             "current_page" => $page,
         ], 200);
-
     }
 
     public function store(Request $request)
@@ -146,9 +176,6 @@ class SshController extends Controller
         ], 201);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $sshId)
     {
         $sshData = $request->validate([
@@ -158,12 +185,17 @@ class SshController extends Controller
             'name' => 'nullable|string|max:255',
             'password' => 'nullable|string|max:255',
             'team_id' => 'nullable|exists:teams,id',
+            'revoked' => 'nullable|boolean' ?: false,
         ]);
 
         $gpgKeyData = $request->validate([
             'private_key' => 'nullable|string',
             'public_key' => 'nullable|string',
         ]);
+
+        if ($sshData) {
+            $sshData['revoked'] = false;
+        }
 
         $authUser = $this->getUserFromToken($request);
 
@@ -212,12 +244,10 @@ class SshController extends Controller
         ], 200);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($sshConnectionsId, Request $request)
     {
         $sshConnection = sshConnections::findOrFail($sshConnectionsId);
+
         if (!$sshConnection) {
             return response()->json(['error' => "SSH connection not found"], 404);
         }
@@ -236,7 +266,12 @@ class SshController extends Controller
             return response()->json(['error' => "Permission denied"], 403);
         }
 
-        $userInTeam->update(['revoked' => true]);
+        if ($sshConnection->revoked === true) {
+            $sshConnection->delete();
+        } else {
+            $sshConnection->update(['revoked' => true]);
+            $sshConnection->save();
+        }
 
         $this->clearCache($authUser->id, $sshConnection->team_id, 30);
 
