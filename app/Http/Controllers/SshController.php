@@ -61,6 +61,16 @@ class SshController extends Controller
         return $page;
     }
 
+    private function getDefaultUserTeam($userId)
+    {
+        $defaultTeam = Teams::where('type', 'default_user_team')
+        ->whereHas('members', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })
+        ->first();
+
+        return $defaultTeam;
+    }
 
     public function index(Request $request)
     {
@@ -77,11 +87,7 @@ class SshController extends Controller
         $getRevoked = $request->input("get_revoked", false);
 
         if (!$teamId) {
-            $defaultTeam = Teams::where('type', 'default_user_team')
-                ->whereHas('members', function ($query) use ($authUser) {
-                    $query->where('user_id', $authUser->id);
-                })
-                ->first();
+            $defaultTeam = $this->getDefaultUserTeam($authUser->id);
 
             if (!$defaultTeam) {
                 return response()->json(['error' => "Default team not found"], 404);
@@ -126,10 +132,9 @@ class SshController extends Controller
         $sshData = $request->validate([
             'login' => 'required|string|max:255',
             'hostname' => 'required|string|max:512',
-            'port' => 'nullable|integer',
             'name' => 'nullable|string|max:255',
             'password' => 'nullable|string|max:255',
-            'team_id' => 'required|exists:teams,id',
+            'team_id' => 'nullable|numeric|exists:teams,id',
         ]);
 
         $gpgKeyData = $request->validate([
@@ -138,7 +143,19 @@ class SshController extends Controller
         ]);
 
         $authUser = $this->getUserFromToken($request);
+        $teamId = $request->input('team_id', null);
+        if (!$teamId) {
+            $defaultTeam = $this->getDefaultUserTeam($authUser->id);
 
+            if (!$defaultTeam) {
+                return response()->json(['error' => "Default team not found"], 404);
+            }
+
+            $sshData["team_id"] = $defaultTeam->id;
+        }
+
+
+        // Sprawdzenie, czy użytkownik należy do zespołu
         $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
             ->where('team_id', $sshData['team_id'])
             ->first();
@@ -147,31 +164,34 @@ class SshController extends Controller
             return response()->json(['error' => "User isn't a team member"], 403);
         }
 
+        // Sprawdzenie, czy użytkownik ma odpowiednie uprawnienia
         if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
             return response()->json(['error' => "Permission denied"], 403);
         }
 
+        // Utworzenie połączenia SSH
         $sshConnection = sshConnections::create($sshData);
 
         if (!$sshConnection) {
             return response()->json(['error' => "Failed to create SSH connection"], 500);
         }
 
-        $gpgKey = null;
-
-        if (isset($sshData['public_key']) || isset($gpgKeyData['private_key'])) {
-            $gpgKey = GpgKeys::create([
-                'private_key' => isset($gpgKeyData['private_key']) ? $gpgKeyData['private_key'] : null,
-                'public_key' => isset($gpgKeyData['public_key']) ? $gpgKeyData['public_key'] : null,
+        // Utworzenie kluczy GPG, jeśli zostały dostarczone
+        if (isset($gpgKeyData['public_key']) || isset($gpgKeyData['private_key'])) {
+            GpgKeys::create([
+                'private_key' => $gpgKeyData['private_key'] ?? null,
+                'public_key' => $gpgKeyData['public_key'] ?? null,
                 'ssh_connection_id' => $sshConnection->id,
             ]);
         }
 
+        // Czyszczenie pamięci podręcznej
         $this->clearCache($authUser->id, $sshData['team_id'], 30);
 
+
         return response()->json([
-            "ssh_connection" => $sshConnection,
-            "gpg_key" => $gpgKey ?: null,
+            // "ssh_connection" => $sshConnection,
+            // "gpg_key" => $gpgKey ?: null,
             "message" => "SSH connection and GPG key created successfully",
         ], 201);
     }
@@ -185,7 +205,6 @@ class SshController extends Controller
             'name' => 'nullable|string|max:255',
             'password' => 'nullable|string|max:255',
             'team_id' => 'nullable|exists:teams,id',
-            'revoked' => 'nullable|boolean' ?: false,
         ]);
 
         $gpgKeyData = $request->validate([
@@ -193,11 +212,22 @@ class SshController extends Controller
             'public_key' => 'nullable|string',
         ]);
 
+        $authUser = $this->getUserFromToken($request);
+        $teamId = $request->input('team_id', null);
+        if (!$teamId) {
+            $defaultTeam = $this->getDefaultUserTeam($authUser->id);
+
+            if (!$defaultTeam) {
+                return response()->json(['error' => "Default team not found"], 404);
+            }
+
+            $sshData['team_id'] = $defaultTeam->id;
+        }
+
         if ($sshData) {
             $sshData['revoked'] = false;
         }
 
-        $authUser = $this->getUserFromToken($request);
 
         $sshConnection = sshConnections::find($sshId);
 
