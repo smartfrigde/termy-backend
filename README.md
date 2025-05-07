@@ -1,13 +1,5 @@
 # Termy Backend
 
-## 📚 Table of Contents
-
-- [Running the project on Windows](#termy-laravel---running-the-project-with-docker-on-windows)
-- [Running the project on Linux](#termy-laravel---running-the-project-with-docker-on-linux)
-- [Running the project on Linux](#termy-laravel---running-the-project-with-docker-on-mac)
-
----
-
 # Termy Laravel - Running the project with Docker (Windows)
 
 This project uses Docker to run the Laravel + MySQL environment. The `.bat` scripts automate the entire process, but you can also perform everything manually.
@@ -157,7 +149,6 @@ This project uses Docker to run the Laravel + MySQL environment. The `.sh` scrip
 ## ✅ Requirements
 
 - **Composer** →  [Download here](https://getcomposer.org/download/)
-- **Docker Desktop for MacOs** → [Download here](https://www.docker.com/products/docker-desktop/) 
 - **Docker-cli for Linux** → [Download here](https://docs.docker.com/desktop/setup/install/linux/)
 - **PHP 8+** (if you want to run `php artisan serve` locally)
 - **bash** (if you are using any additional `.sh` scripts)
