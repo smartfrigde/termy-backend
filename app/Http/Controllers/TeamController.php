@@ -72,6 +72,7 @@ class TeamController extends Controller
             'teams' => $teams,
             'total_pages' => $totalPages,
             'current_page' => $page,
+            'total_user_teams' => $totalItems
         ], 200);
     }
 
