@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\TeamsTypesEnum;
 use Illuminate\Database\Eloquent\Model;
 
 class Teams extends Model
@@ -33,5 +34,9 @@ class Teams extends Model
     public function members()
     {
         return $this->hasMany(TeamsMembers::class, 'team_id', 'id');
+    }
+
+    public function scopeWithoutDefaultTeam($query){
+        return $query->where('type', "!=", TeamsTypesEnum::PRIVATE_USER_TEAM);
     }
 }

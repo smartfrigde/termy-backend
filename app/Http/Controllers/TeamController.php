@@ -58,7 +58,7 @@ class TeamController extends Controller
         }
 
         $teams = Cache::remember("teams_{$authUser->id}_page_{$page}_perPage_{$perPage}", 60, function () use ($authUser, $offset, $perPage) {
-            return Teams::byMemberId($authUser->id)->withoutRevoked()
+            return Teams::byMemberId($authUser->id)->withoutRevoked()->withoutDefaultTeam()
             ->orderBy('created_at', 'desc')
             ->offset($offset)
             ->limit($perPage)
@@ -71,7 +71,7 @@ class TeamController extends Controller
         return response()->json([
             'teams' => $teams,
             'total_pages' => $totalPages,
-            'current_page' => $page,
+            'current_page' => (int) $page,
             'total_user_teams' => $totalItems
         ], 200);
     }
