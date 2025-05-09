@@ -35,6 +35,7 @@ Route::middleware(BypassCsrfMiddleware::class)->group(function () {
         // -----------------------
         Route::prefix("teams/{teamId}/members")->group(function () {
             Route::get('/', [TeamController::class, 'getMembers'])->name('teams.members.index');
+            Route::get('/me', [TeamController::class, 'getMember'])->name('teams.members.show');
             Route::patch('/{id}', [TeamController::class, 'updateMember'])->name('teams.members.update');
             Route::delete('/{id}', [TeamController::class, 'removeMember'])->name('teams.members.destroy');
         });

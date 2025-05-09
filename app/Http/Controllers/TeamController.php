@@ -58,11 +58,25 @@ class TeamController extends Controller
         }
 
         $teams = Cache::remember("teams_{$authUser->id}_page_{$page}_perPage_{$perPage}", 60, function () use ($authUser, $offset, $perPage) {
-            return Teams::byMemberId($authUser->id)->withoutRevoked()->withoutDefaultTeam()
-                ->orderBy('created_at', 'desc')
-                ->offset($offset)
-                ->limit($perPage)
-                ->get();
+            return Teams::byMemberId($authUser->id)
+            ->withoutRevoked()
+            ->withoutDefaultTeam()
+            ->orderBy('created_at', 'desc')
+            ->with(['members' => function ($query) {
+                $query->select('id', 'team_id', 'user_id', 'permission_level_id');
+            }])
+            ->offset($offset)
+            ->limit($perPage)
+            ->get()
+            ->map(function ($team) use ($authUser) {
+                $team->permission_in_team = optional(
+                    $team->members->where("user_id", $authUser->id)->first()
+                )->permission_level_id;
+
+                unset($team->members);
+        
+                return $team;
+            });
         });
 
         $totalItems = Teams::withoutRevoked()->byMemberId($authUser->id)->count();
@@ -529,4 +543,52 @@ class TeamController extends Controller
             'team_id' => (int) $teamId,
         ], 200);
     }
+
+    public function getMember(Request $request, $teamId)
+    {
+        if (!is_numeric($teamId)) {
+            return response()->json(['error' => 'Invalid ID format'], 400);
+        }
+
+        if (!$teamId) {
+            return response()->json(['error' => 'Team ID is required'], 400);
+        }
+    
+        $authUser = $this->getUserFromToken($request);
+
+        if (!$authUser) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    
+        $members = TeamsMembers::withoutRevoked()
+                ->where('user_id', $authUser->id)
+                ->where('team_id', $teamId)
+                ->orderBy('created_at', 'desc')
+                ->with(['user' => function ($query) {
+                    $query->select('id', 'name', 'email', 'surname', 'profile_image');
+                }])
+                ->select('team_id', 'revoked', 'user_id', 'permission_level_id')
+                ->get()
+                ->map(function ($member) {
+                    // Sprawdzamy, czy użytkownik istnieje
+                    $user = $member->user;
+                    if ($user) {
+                        return [
+                            'team_id' => $member->team_id,
+                            'permission_level_id' => $member->permission_level_id,
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'surname' => $user->surname,
+                            'profile_image' => $user->profile_image,
+                        ];
+                    }
+                    return null;
+                })->filter(); 
+    
+        return response()->json([
+            'member' => $members,
+            'team_id' => (int) $teamId,
+        ], 200);
+    }    
 }
