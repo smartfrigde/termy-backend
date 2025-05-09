@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\TeamsTypesEnum;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Teams extends Model
 {
@@ -13,6 +14,7 @@ class Teams extends Model
         "name",
         "type",
         "revoked",
+        "join_code"
     ];
     public function user()
     {
@@ -36,7 +38,25 @@ class Teams extends Model
         return $this->hasMany(TeamsMembers::class, 'team_id', 'id');
     }
 
-    public function scopeWithoutDefaultTeam($query){
+    public function scopeWithoutDefaultTeam($query)
+    {
         return $query->where('type', "!=", TeamsTypesEnum::PRIVATE_USER_TEAM);
+    }
+
+    public function scopeByJoinCode($query, $joinCode){
+        return $query->where("join_code", $joinCode);
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+    
+        static::creating(function ($team) {
+            do {
+                $code = strtoupper(Str::random(7));
+            } while (self::where('join_code', $code)->exists());
+    
+            $team->join_code = $code;
+        });
     }
 }

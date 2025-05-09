@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->enum('type', ["default_user_team", "team"])->default("team")->comment('The type of team, either a default user team or a custom team');
             $table->boolean('revoked')->default(false)->comment('Indicates if the team has been revoked');
+            $table->string("join_code", 7)->nullable()->unique();
             $table->timestamps();
         });
     }
