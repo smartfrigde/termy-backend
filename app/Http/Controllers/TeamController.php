@@ -57,7 +57,7 @@ class TeamController extends Controller
             return response()->json(['error' => 'Maximum per_page limit is 100'], 400);
         }
 
-        $teams = Cache::remember("teams_{$authUser->id}_page_{$page}_perPage_{$perPage}", 60, function () use ($authUser, $offset, $perPage) {
+        $teams = Cache::remember("teams_{$authUser->id}_page_{$page}_perPage_{$perPage}", 1, function () use ($authUser, $offset, $perPage) {
             return Teams::byMemberId($authUser->id)
             ->withoutRevoked()
             ->withoutDefaultTeam()
@@ -74,7 +74,11 @@ class TeamController extends Controller
                 )->permission_level_id;
 
                 unset($team->members);
-        
+
+                if (!TeamRole::hasHighestRole($team->permission_in_team, TeamRole::ADMINISTRATOR->value)){
+                    unset($team->join_code);
+                }
+
                 return $team;
             });
         });
@@ -125,7 +129,24 @@ class TeamController extends Controller
 
         $this->clearCache($authUser->id, $team);
 
-        $createdTeam = Teams::find($team->id);
+        $createdTeam = Teams::find($team->id)
+        ->with(['members' => function ($query) {
+            $query->select('id', 'team_id', 'user_id', 'permission_level_id');
+        }])
+        ->get()
+        ->map(function ($team) use ($authUser) {
+            $team->permission_in_team = optional(
+                $team->members->where("user_id", $authUser->id)->first()
+            )->permission_level_id;
+
+            unset($team->members);
+
+            if (!TeamRole::hasHighestRole($team->permission_in_team, TeamRole::ADMINISTRATOR->value)){
+                unset($team->join_code);
+            }
+
+            return $team;
+        });
 
         return response()->json([
             'team' => $createdTeam,
@@ -389,11 +410,7 @@ class TeamController extends Controller
             return response()->json(['error' => 'You are not a member of this team'], 403);
         }
 
-        if (TeamRole::hasHighestRole($teamMember->permission_level_id, $member->permission_level_id)) {
-            return response()->json(['error' => 'You cannot change the role of this member'], 403);
-        }
-
-        if (TeamRole::hasHighestRole((int) $teamMember->permission_level_id, (int) $request->input('permission_level_id'))) {
+        if (!TeamRole::hasHighestRole($teamMember->permission_level_id, $member->permission_level_id)) {
             return response()->json(['error' => 'You cannot change the role of this member'], 403);
         }
 
@@ -409,62 +426,62 @@ class TeamController extends Controller
     public function removeMember($teamId, $memberId, Request $request)
     {
         $teams = Teams::find($teamId);
-    
+
         if (!$teams) {
             return response()->json(['error' => ''], 404);
         }
-    
+
         if ($teams->revoked) {
             return response()->json(['error' => 'This team is revoked'], 404);
         }
-    
+
         if ($teams->type === TeamsTypesEnum::PRIVATE_USER_TEAM->value) {
             return response()->json(['error' => 'This team cannot be edited'], 403);
         }
-    
+
         $member = TeamsMembers::withoutRevoked()
             ->where('user_id', $memberId)
             ->where('team_id', $teamId)
             ->firstOrFail();
-    
+
         if ($member->team_id !== $teams->id) {
             return response()->json(['error' => 'This member does not belong to this team'], 404);
         }
-    
+
         $authUser = $this->getUserFromToken($request);
-    
+
         if (!$authUser) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-    
+
         $teamMember = TeamsMembers::where('user_id', $authUser->id)
             ->where('team_id', $teams->id)
             ->first() ?? null;
-    
+
         if (!$teamMember) {
             return response()->json(['error' => 'You are not a member of this team'], 403);
         }
-    
+
         if (
             $teamMember->permission_level_id !== TeamRole::OWNER->value &&
             $teamMember->permission_level_id !== TeamRole::ADMINISTRATOR->value
         ) {
             return response()->json(['error' => 'Only team owners and administrators can remove members'], 403);
         }
-    
-        if (TeamRole::hasHighestRole($teamMember->permission_level_id, $member->permission_level_id)) {
+
+        if (!TeamRole::hasHighestRole($teamMember->permission_level_id, $member->permission_level_id)) {
             return response()->json(['error' => 'You cannot remove this member'], 403);
         }
-    
+
         $totalItems = TeamsMembers::withoutRevoked()->where('team_id', $teamId)->count();
-    
+
         if ($totalItems === 1) {
             return response()->json(["message" => "In team have to be minimal 1 member"], 403);
         }
-    
+
         $member->update(['revoked' => true]);
         $this->clearTeamMemberCache($teams, $member);
-    
+
         $hasOwnerOrAdmin = TeamsMembers::withoutRevoked()
             ->where('team_id', $teamId)
             ->whereIn('permission_level_id', [
@@ -472,21 +489,21 @@ class TeamController extends Controller
                 TeamRole::ADMINISTRATOR->value
             ])
             ->exists();
-    
+
         if (!$hasOwnerOrAdmin) {
             $randomMember = TeamsMembers::withoutRevoked()
                 ->where('team_id', $teamId)
                 ->inRandomOrder()
                 ->first();
-    
+
             if ($randomMember) {
                 $randomMember->update(['permission_level_id' => TeamRole::OWNER->value]);
             }
         }
-    
+
         return response()->json(['message' => 'Member removed successfully'], 200);
     }
-    
+
 
     public function getMembers(Request $request, $teamId)
     {
@@ -553,13 +570,13 @@ class TeamController extends Controller
         if (!$teamId) {
             return response()->json(['error' => 'Team ID is required'], 400);
         }
-    
+
         $authUser = $this->getUserFromToken($request);
 
         if (!$authUser) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-    
+
         $members = TeamsMembers::withoutRevoked()
                 ->where('user_id', $authUser->id)
                 ->where('team_id', $teamId)
@@ -584,11 +601,11 @@ class TeamController extends Controller
                         ];
                     }
                     return null;
-                })->filter(); 
-    
+                })->filter();
+
         return response()->json([
             'member' => $members,
             'team_id' => (int) $teamId,
         ], 200);
-    }    
+    }
 }

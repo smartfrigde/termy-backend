@@ -11,9 +11,9 @@ enum TeamRole: int
     public static function getHierarchy(): array
     {
         return [
-            2 => self::MEMBER->value,
-            1 => self::ADMINISTRATOR->value,
-            0 => self::OWNER->value,
+            self::MEMBER->value => 2,
+            self::ADMINISTRATOR->value => 1,
+            self::OWNER->value => 0,
         ];
     }
 
@@ -38,7 +38,7 @@ enum TeamRole: int
     public static function hasHighestRole(int $grandestRole, int $role): bool
     {
         $hierarchy = self::getHierarchy();
-        $hierarchySize = count($hierarchy) - 1;
+        $hierarchySize = count($hierarchy);
 
         if ($grandestRole < 0 || $grandestRole > $hierarchySize) {
             return false;
@@ -47,6 +47,7 @@ enum TeamRole: int
         if ($role < 0 || $role > $hierarchySize) {
             return false;
         }
+
 
         return $hierarchy[$grandestRole] <= $hierarchy[$role];
     }

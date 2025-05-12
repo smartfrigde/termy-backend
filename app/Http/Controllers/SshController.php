@@ -204,7 +204,7 @@ class SshController extends Controller
             'port' => 'nullable|integer',
             'name' => 'nullable|string|max:255',
             'password' => 'nullable|string|max:255',
-            'team_id' => 'nullable|exists:teams,id',
+            'team_id' => 'nullable|numeric',
         ]);
 
         $gpgKeyData = $request->validate([
