@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeamController;
 use App\Http\Middleware\AuthenticatedWithToken;
-use Illuminate\Auth\Middleware\Authenticate;
 use App\Http\Controllers\SshController;
 use App\Http\Middleware\BypassCsrfMiddleware;
 

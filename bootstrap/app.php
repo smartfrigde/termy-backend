@@ -16,7 +16,7 @@ health: '/up',
 
 $middleware->statefulApi();
 $middleware->validateCsrfTokens(
-except: ['/*', 'users'],
+except: ['/*'],
 );
 })
 ->withExceptions(function (Exceptions $exceptions) {

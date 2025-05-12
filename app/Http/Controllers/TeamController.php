@@ -265,12 +265,9 @@ class TeamController extends Controller
             ->where('team_id', $teams->id)
             ->first() ?? null;
 
-        if (!$teamMember) {
-            return response()->json(['error' => 'You are not a member of this team'], 403);
-        }
 
         if ($teamMember->permission_level_id !== TeamRole::OWNER->value) {
-            return response()->json(['error' => 'Only team owners can delete the team'], 403);
+            return response()->json(['error' => 'You cannot delete this team'], 403);
         }
 
         $teams->update(['revoked' => true]);
@@ -371,57 +368,77 @@ class TeamController extends Controller
 
     public function updateMember(Request $request, $teamId, $memberId)
     {
-
         $teams = Teams::find($teamId);
-
+    
         if (!$teams) {
             return response()->json(['error' => ''], 404);
         }
-
+    
         if ($teams->revoked) {
             return response()->json(['error' => 'This team is revoked'], 404);
         }
-
+    
         if ($teams->type === TeamsTypesEnum::PRIVATE_USER_TEAM->value) {
             return response()->json(['error' => 'This team cannot be edited'], 403);
         }
-
-        $member = TeamsMembers::withoutRevoked()->where('user_id', $memberId)->where('team_id', $teamId)->firstOrFail();
-
-        if ($member->team_id !== $teams->id) {
-            return response()->json(['error' => 'This member does not belong to this team'], 404);
-        }
-
+        
         $request->validate([
             'permission_level_id' => 'required|integer|in:' . implode(',', TeamRole::getAllRolesAsStrings()),
         ]);
 
+        $member = TeamsMembers::withoutRevoked()
+            ->where('user_id', $memberId)
+            ->where('team_id', $teamId)
+            ->firstOrFail();
+    
+        if ($member->team_id !== $teams->id) {
+            return response()->json(['error' => 'This member does not belong to this team'], 404);
+        }
+    
         $authUser = $this->getUserFromToken($request);
-
+    
         if (!$authUser) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-
+    
         $teamMember = TeamsMembers::where('user_id', $authUser->id)
             ->where('team_id', $teams->id)
-            ->first() ?? null;
-
+            ->first();
+    
         if (!$teamMember) {
             return response()->json(['error' => 'You are not a member of this team'], 403);
         }
-
+    
         if (!TeamRole::hasHighestRole($teamMember->permission_level_id, $member->permission_level_id)) {
             return response()->json(['error' => 'You cannot change the role of this member'], 403);
         }
-
-        $member->update($request->only('permission_level_id'));
-
+    
+        $newRole = (int) $request->get('permission_level_id');
+    
+        if (
+            $member->permission_level_id === TeamRole::OWNER->value &&
+            $newRole !== TeamRole::OWNER->value
+        ) {
+            $otherOwnersCount = TeamsMembers::withoutRevoked()
+                ->where('team_id', $teamId)
+                ->where('permission_level_id', TeamRole::OWNER->value)
+                ->where('user_id', '!=', $memberId)
+                ->count();
+    
+            if ($otherOwnersCount === 0) {
+                return response()->json(['error' => 'Cannot change the role of the only team owner'], 403);
+            }
+        }
+    
+        $member->update(['permission_level_id' => $newRole]);
+    
         $this->clearTeamMemberCache($teams, $member);
-
+    
         return response()->json([
             'member' => $member,
         ], 200);
     }
+    
 
     public function removeMember($teamId, $memberId, Request $request)
     {
