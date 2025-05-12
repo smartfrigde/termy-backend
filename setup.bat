@@ -1,7 +1,9 @@
 @echo off
 
 REM Install composer dependencies
+cd ./laravel
 composer install
+cd ./../
 
 REM Check if docker-compose is available
 where docker-compose >nul 2>nul
