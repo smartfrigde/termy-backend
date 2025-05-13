@@ -155,7 +155,6 @@ class SshController extends Controller
         }
 
 
-        // Sprawdzenie, czy użytkownik należy do zespołu
         $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
             ->where('team_id', $sshData['team_id'])
             ->first();
@@ -164,34 +163,31 @@ class SshController extends Controller
             return response()->json(['error' => "User isn't a team member"], 403);
         }
 
-        // Sprawdzenie, czy użytkownik ma odpowiednie uprawnienia
         if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
             return response()->json(['error' => "Permission denied"], 403);
         }
 
-        // Utworzenie połączenia SSH
         $sshConnection = sshConnections::create($sshData);
 
         if (!$sshConnection) {
             return response()->json(['error' => "Failed to create SSH connection"], 500);
         }
 
-        // Utworzenie kluczy GPG, jeśli zostały dostarczone
+        $gpgKey = null;
         if (isset($gpgKeyData['public_key']) || isset($gpgKeyData['private_key'])) {
-            GpgKeys::create([
+            $gpgKey = GpgKeys::create([
                 'private_key' => $gpgKeyData['private_key'] ?? null,
                 'public_key' => $gpgKeyData['public_key'] ?? null,
                 'ssh_connection_id' => $sshConnection->id,
             ]);
         }
 
-        // Czyszczenie pamięci podręcznej
         $this->clearCache($authUser->id, $sshData['team_id'], 30);
 
 
         return response()->json([
-            // "ssh_connection" => $sshConnection,
-            // "gpg_key" => $gpgKey ?: null,
+            "ssh_connection" => $sshConnection,
+            "gpg_key" => $gpgKey ?: null,
             "message" => "SSH connection and GPG key created successfully",
         ], 201);
     }
