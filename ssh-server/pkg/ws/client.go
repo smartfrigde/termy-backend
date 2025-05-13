@@ -2,16 +2,17 @@ package ws
 
 import (
 	"log"
-
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
+	ID   string
 	Conn *websocket.Conn
 	Send chan []byte
+	Done chan struct{}
 }
 
-func (c *Client) Read() {
+func (c *Client) read() {
 	defer c.Conn.Close()
 	for {
 		_, msg, err := c.Conn.ReadMessage()
@@ -19,14 +20,14 @@ func (c *Client) Read() {
 			log.Println("Błąd odczytu:", err)
 			break
 		}
+		
 		log.Printf("Odebrano wiadomość: %s", msg)
 
-		// Tutaj możesz np. wysłać polecenie SSH i zwrócić wynik
 		c.Send <- []byte("Odpowiedź serwera: " + string(msg))
 	}
 }
 
-func (c *Client) Write() {
+func (c *Client) write() {
 	defer c.Conn.Close()
 	for msg := range c.Send {
 		err := c.Conn.WriteMessage(websocket.TextMessage, msg)
