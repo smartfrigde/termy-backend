@@ -54,15 +54,14 @@ services:
     container_name: termy-go
     build:
       context: ./ssh-server
-      dockerfile: Dockerfile
+      dockerfile: ./dockerfiles/Dockerfile.dev
     ports:
       - "8080:4576"
-    networks:
-      - sail
     volumes:
       - ./ssh-server:/app
-    depends_on:
-      - mysql
+    networks:
+      - sail
+
 
 networks:
   sail:

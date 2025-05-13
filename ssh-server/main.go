@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	fmt.Println("Go SSH server is running...")
+	fmt.Println("I run ssh server")
 }
