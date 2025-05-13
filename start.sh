@@ -5,6 +5,13 @@ docker start termy-go
 
 echo "Servers are running"
 
+echo "Do you want run composer install?"
+read composer
+
+if [ "$composer" = "y" ]; then
+    docker exec -it termy-laravel composer install
+fi
+
 echo "Do you want to run migrations? (y/n)"
 read migrate
 
@@ -12,6 +19,8 @@ if [ "$migrate" = "y" ]; then
     echo "Running migrations in docker..."
     docker exec -it termy-laravel php artisan migrate
 fi
+
+
 
 echo "Do you want enter to project console? (y/n)"
 read console

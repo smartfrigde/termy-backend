@@ -1,9 +1,5 @@
 #!/bin/bash
 
-cd ./laravel
-composer install
-cd ./../
-
 if command -v docker-compose &> /dev/null; then
     echo "Using docker-compose"
     docker-compose up --build

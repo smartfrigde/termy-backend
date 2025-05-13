@@ -6,6 +6,10 @@
 /storage/*.key
 /storage/pail
 /vendor
+!/vendor/laravel/
+!/vendor/laravel/sail/
+!/vendor/laravel/sail/runtimes/
+!/vendor/laravel/sail/runtimes/8.3/
 .env.backup
 .env.production
 .phpactor.json
