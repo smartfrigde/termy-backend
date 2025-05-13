@@ -3,6 +3,7 @@
 REM
 docker start termy-laravel
 docker start termy-mysql
+docker start termy-go
 
 echo Servers are running
 
