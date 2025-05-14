@@ -13,61 +13,66 @@ use function Pest\Laravel\json;
 
 class SshController extends Controller
 {
-    private function clearCache($userId, $teamId, $perPage = 30)
-    {
-        Cache::forget("ssh_connections_{$userId}_{$teamId}_total_pages_per_page{$perPage}");
+private function clearCache($sshId, $teamId, $userId, $perPage = 30)
+{
+    Cache::forget("ssh_connections_{$userId}_{$teamId}_total_pages_per_page{$perPage}");
 
-        $page = $this->calculatePageForShhConnection($teamId, $userId, $perPage);
-        $pageWithRevoked = $this->calculatePageForShhConnection($teamId, $userId, $perPage, true);
-        if ($page !== null) {
-            Cache::forget("ssh_connections_{$userId}_{$page}_{$perPage}");
-        }
+    $page = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage);
+    $pageWithRevoked = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage, true);
 
-        if ($pageWithRevoked !== null) {
-            Cache::forget("ssh_connections_{$userId}_{$pageWithRevoked}_{$perPage}_with_revoked");
+
+    if ($page !== null) {
+
+        $totalPages = ceil(sshConnections::withoutRevoked()->where('team_id', $teamId)->count() / $perPage);
+
+        for ($currentPage = $page; $currentPage <= $totalPages; $currentPage++) {
+            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}");
+            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
         }
     }
 
-    private function calculatePageForShhConnection($sshConnectionId, $teamId, $authUserId, $perPage = 30, $getRevoked = false)
+    if ($pageWithRevoked !== null) {
+        $totalPagesWithRevoked = ceil(sshConnections::where('team_id', $teamId)->count() / $perPage);
+
+        for ($currentPage = $pageWithRevoked; $currentPage <= $totalPagesWithRevoked; $currentPage++) {
+            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
+        }
+    }
+}
+
+
+    private function calculatePageForShhConnection($sshConnectionId, $teamId, $perPage = 30, $getRevoked = false)
     {
-        $teams = Teams::byMemberId($authUserId)
-            ->withoutRevoked()
-            ->orderBy('created_at', 'desc')
-            ->pluck("id")
-            ->toArray();
+        $query = sshConnections::where('team_id', $teamId)
+            ->orderBy('created_at', 'desc');
 
         if ($getRevoked) {
-            $sshConnectionsIds = sshConnections::onlyRevoked()
-                ->where('team_id', $teamId)
-                ->orderBy('created_at', 'desc')
-                ->pluck("id")
-                ->toArray();
+            $query->get();
         } else {
-            $sshConnectionsIds = sshConnections::withoutRevoked()
-                ->where('team_id', $teamId)
-                ->orderBy('created_at', 'desc')
-                ->pluck("id")
-                ->toArray();
+            $query->withoutRevoked();
         }
 
-        $sshIndex = array_search($sshConnectionId, $sshConnectionsIds);
+        $sshConnections = $query->simplePaginate($perPage);
 
-        if ($sshIndex  === false) {
+        
+        $sshIndex = $sshConnections->getCollection()->search(function ($item) use ($sshConnectionId) {
+            return $item->id === $sshConnectionId;
+        });
+
+        if ($sshIndex === false) {
             return null;
         }
 
-        $page = (int) ceil(($sshIndex + 1) / $perPage);
-
-        return $page;
+        return ceil(($sshIndex + 1) / $perPage);
     }
 
     private function getDefaultUserTeam($userId)
     {
         $defaultTeam = Teams::where('type', 'default_user_team')
-        ->whereHas('members', function ($query) use ($userId) {
-            $query->where('user_id', $userId);
-        })
-        ->first();
+            ->whereHas('members', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
+            ->first();
 
         return $defaultTeam;
     }
@@ -186,12 +191,12 @@ class SshController extends Controller
         }
 
         // Czyszczenie pamięci podręcznej
-        $this->clearCache($authUser->id, $sshData['team_id'], 30);
+        $this->clearCache($sshConnection->id, $sshData['team_id'], $authUser->id, 30);
 
 
         return response()->json([
-             "ssh_connection" => $sshConnection,
-             "gpg_key" => $gpgKey ?: null,
+            "ssh_connection" => $sshConnection,
+            "gpg_key" => $gpgKey ?: null,
             "message" => "SSH connection and GPG key created successfully",
         ], 201);
     }

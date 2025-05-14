@@ -9,7 +9,7 @@ type SSHClient struct {
 	Client *ssh.Client
 }
 
-func Connect(user, password, host string) (*SSHClient, error) {
+func Connect(user string, password string, host string) (*SSHClient, error) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -23,19 +23,4 @@ func Connect(user, password, host string) (*SSHClient, error) {
 	}
 
 	return &SSHClient{Client: client}, nil
-}
-
-func (s *SSHClient) RunCommand(cmd string)(string, error) {
-	session, err := s.Client.NewSession()
-	if err != nil {
-		return "", fmt.Errorf("nie można utworzyć sesji: %w", err)
-	}
-	defer session.Close()
-
-	output, err := session.CombinedOutput(cmd)
-	if err != nil {
-		return "", fmt.Errorf("błąd wykonania komendy: %w\n%s", err, output)
-	}
-
-	return string(output), nil
 }
