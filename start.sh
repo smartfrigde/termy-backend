@@ -22,7 +22,7 @@ fi
 
 
 
-echo "Do you want enter to project console? (y/n)"
+echo "Do you want enter to laravel container console? (y/n)"
 read console
 
 if [ "$console" = "y" ]; then
