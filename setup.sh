@@ -12,4 +12,3 @@ else
 fi
 
 echo "Starting the application..."
-

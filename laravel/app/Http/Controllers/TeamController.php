@@ -12,33 +12,61 @@ use Illuminate\Http\Request;
 class TeamController extends Controller
 {
 
-    private function clearCache($userId, $team)
+    private function clearCache($userId, $team, $perPage = 30)
     {
         Cache::forget("teams_{$userId}_count");
 
         $page = $this->calculatePageForTeam($team->id, $userId);
+        $pageWithRevoked = $this->calculatePageForTeam($team->id, $userId, true);
         $cacheKey = "teams_{$userId}_page_{$page}_perPage_30";
 
-        $teams = Cache::get($cacheKey) ?? collect();
-        $teams->push($team);
 
-        Cache::put($cacheKey, $teams, 60);
+
+        if ($page !== null) {
+            $totalPages = ceil(Teams::byMemberId($userId)->withoutRevoked()->count() / $perPage);
+
+            for ($currentPage = $page; $currentPage <= $totalPages; $currentPage++) {
+                if (Cache::has("teams_{$userId}_page_{$page}_perPage_30")) {
+                    Cache::forget("teams_{$userId}_page_{$page}_perPage_30");
+                }
+            }
+        }
+
+        if ($pageWithRevoked !== null) {
+            $totalPagesWithRevoked = ceil(Teams::byMemberId($userId)->count() / $perPage);
+
+            for ($currentPage = $page; $currentPage <= $totalPagesWithRevoked; $currentPage++) {
+                if (Cache::has("teams_{$userId}_page_{$page}_perPage_30_with_revoked")) {
+                    Cache::forget("teams_{$userId}_page_{$page}_perPage_30_with_revoked");
+                }
+            }
+        }
     }
 
 
-    private function calculatePageForTeam($teamId, $authUserId, $perPage = 30)
+    private function calculatePageForTeam($id, $authUserId, $perPage = 30, $getRevoked = false)
     {
-        $teams = Teams::byMemberId($authUserId)->withoutRevoked()->orderBy('created_at', 'desc')->pluck("id")->toArray();
 
-        $teamIndex = array_search($teamId, $teams);
+        $query = Teams::byMemberId($authUserId)
+            ->orderBy('created_at', 'desc');
 
-        if ($teamIndex === false) {
+        if ($getRevoked) {
+            $query->onlyRevoked();
+        } else {
+            $query->withoutRevoked();
+        }
+
+        $data = $query->simplePaginate($perPage);
+
+        $sshIndex = $data->getCollection()->search(function ($item) use ($id) {
+            return $item->id === $id;
+        });
+
+        if ($sshIndex === false) {
             return null;
         }
 
-        $page = (int) ceil(($teamIndex + 1) / $perPage);
-
-        return $page;
+        return ceil(($sshIndex + 1) / $perPage);
     }
 
 
@@ -101,7 +129,6 @@ class TeamController extends Controller
             'name' => 'required|string|max:255',
         ]);
 
-
         $authUser = $this->getUserFromToken($request);
 
         if (!$authUser) {
@@ -126,6 +153,7 @@ class TeamController extends Controller
             $team->delete();
             return response()->json(['error' => 'Failed to assign team owner'], 500);
         }
+
 
         $this->clearCache($authUser->id, $team);
 
