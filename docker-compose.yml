@@ -56,7 +56,7 @@ services:
       context: ./ssh-server
       dockerfile: ./dockerfiles/Dockerfile.dev
     ports:
-      - "8080:4576"
+      - "8080:8080"
     volumes:
       - ./ssh-server:/app
     networks:
