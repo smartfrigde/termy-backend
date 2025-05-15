@@ -1,200 +1,107 @@
-# Termy Backend
+<div align="center">
+  <h1>Termy Backend</h1>
+</div>
 
-# Termy Laravel - Running the project with Docker (Windows)
+<p>
+  Termy Frontend can be find
+  <a href="https://github.com/smartfrigde/termy">
+    here
+  </a>
+</p>
 
-This project uses Docker to run the Laravel + MySQL environment. The `.bat` scripts automate the entire process, but you can also perform everything manually.
+<p>
+  Documentation can be find
+  <a href="https://deepwiki.com/smartfrigde/termy-backend">
+    here
+  </a>
+</p>
 
----
+##
+<p>
+  If you want start project with docker read
+  <a href="#-running-with-docker">
+    Running with Docker
+  </a>
+</p>
 
-## 📁 Contents
-
-- `setup.bat` – runs `docker-compose` or `docker compose`, depending on your Docker version.
-- `start.bat` – starts the containers, asks about migrations and entering the project console.
 
 ---
 
 ## ✅ Requirements
 
-- **Composer** →  [Download here](https://getcomposer.org/download/)
-- **Docker Desktop for Windows** → [Download here](https://www.docker.com/products/docker-desktop)
+- **Docker** → [Download here](https://www.docker.com)
 - **PHP 8+** (if you want to run `php artisan serve` locally)
 - **bash** (if you are using any additional `.sh` scripts)
 - **Optional:** `docker-compose`, if you are not using `docker compose`
 
 ---
 
-## 🚀 Running the project with the scripts
+## 🐳 Running with Docker
+### Build containers
+#### method 1 - automatic
 
-### 1. Build the containers
-
-```cmd
-setup.bat
+```
+./setup.sh
 ```
 
-### 2. Launching the project
-the script will ask whether to migrate and go to the project console, its actions will depend on the user's response
-```cmd
-start.sh
+or
+
+```
+./setup.bat
 ```
 
-## ⚙️ Manual start
-### 1. Creating containers
+#### method 2 - manual
+
+1. Copy .env file from .env.example (if file .env not exist)
 ```
-composer install
+cp .env.example .env
+```
+
+2. Copy .env file in the Laravel folder from .env.example in the Laravel folder (if file laravel/.env not exist)
+```
+laravel/.env.example laravel/.env
+```
+
+3. Create containers
+```
 docker-compose up --build
 ```
 or
 ```
-composer install
-docker compose up --build
-```
-depending on the docker version
-
-### 2. Launching the project
-launching containers
-```
-docker start termy-laravel
-docker start termy-mysql
-````
-migrate the database (optional, recommended for first run)
-```
-docker exec -it termy-laravel php artisan migrate
-```
-go to the project console (optional)
-```
-docker exec -it termy-laravel bash
+doker compose up --build
 ```
 
-----
 
+### Run containers
+#### method 1 - automatic
 
-# Termy Laravel - Running the project with Docker (Mac)
-
-This project uses Docker to run the Laravel + MySQL environment. The `.sh` scripts automate the entire process, but you can also perform everything manually.
-
----
-
-## 📁 Contents
-
-- `setup.sh` – runs `docker-compose` or `docker compose`, depending on your Docker version.
-- `start.sh` – starts the containers, asks about migrations and entering the project console.
-
----
-
-## ✅ Requirements
-
-- **Composer** →  [Download here](https://getcomposer.org/download/)
-- **Docker Desktop for Mac** → [Download here](https://www.docker.com/products/docker-desktop/)
-- **PHP 8+** (if you want to run `php artisan serve` locally)
-- **bash** (if you are using any additional `.sh` scripts)
-- **Optional:** `docker-compose`, if you are not using `docker compose`
-
----
-
-## 🚀 Running the project with the scripts
-
-### 1. Build the containers
-
-```cmd
-setup.sh
+```
+./start.sh
 ```
 
-### 2. Launching the project
-the script will ask whether to migrate and go to the project console, its actions will depend on the user's response
-```cmd
-start.sh
-```
-
-## ⚙️ Manual start
-### 1. Creating containers
-```
-composer install
-docker-compose up --build
-```
 or
-```
-composer install
-docker compose up --build
-```
-depending on the docker version
 
-### 2. Launching the project
-launching containers
 ```
-docker start termy-laravel
+./start.bat
+```
+
+#### method 2 - manual
+
+1. Run all docker containers
+```
+docker start termy-go
 docker start termy-mysql
-````
-migrate the database (optional, recommended for first run)
+docker start termy-laravel
+```
+2. Install composer requements (optional if is not installed)
+```
+docker exec -it termy-laravel composer install
+```
+3. Migrate database (optional if is not migrated)
 ```
 docker exec -it termy-laravel php artisan migrate
 ```
-go to the project console (optional)
+4. Enter to laravel conlose (optional)
 ```
 docker exec -it termy-laravel bash
 ```
-
-# Termy Laravel - Running the project with Docker (Linux)
-
-This project uses Docker to run the Laravel + MySQL environment. The `.sh` scripts automate the entire process, but you can also perform everything manually.
-
----
-
-## 📁 Contents
-
-- `setup.sh` – runs `docker-compose` or `docker compose`, depending on your Docker version.
-- `start.sh` – starts the containers, asks about migrations and entering the project console.
-
----
-
-## ✅ Requirements
-
-- **Composer** →  [Download here](https://getcomposer.org/download/)
-- **Docker-cli for Linux** → [Download here](https://docs.docker.com/desktop/setup/install/linux/)
-- **PHP 8+** (if you want to run `php artisan serve` locally)
-- **bash** (if you are using any additional `.sh` scripts)
-- **Optional:** `docker-compose`, if you are not using `docker compose`
-
----
-
-## 🚀 Running the project with the scripts
-
-### 1. Build the containers
-
-```cmd
-setup.sh
-```
-
-### 2. Launching the project
-the script will ask whether to migrate and go to the project console, its actions will depend on the user's response
-```cmd
-start.sh
-```
-
-## ⚙️ Manual start
-### 1. Creating containers
-```
-composer install
-docker-compose up --build
-```
-or
-```
-composer install
-docker compose up --build
-```
-depending on the docker version
-
-### 2. Launching the project
-launching containers
-```
-docker start termy-laravel
-docker start termy-mysql
-````
-migrate the database (optional, recommended for first run)
-```
-docker exec -it termy-laravel php artisan migrate
-```
-go to the project console (optional)
-```
-docker exec -it termy-laravel bash
-```
-
