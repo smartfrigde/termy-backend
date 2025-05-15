@@ -9,7 +9,9 @@ import (
 )
 
 var (
-	upgrader = websocket.Upgrader{}
+	upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
+                                  		return true // ✅ Accept all origins
+                                  	},}
 	clients  = make(map[string]*Client)
 	mu       sync.Mutex
 )
