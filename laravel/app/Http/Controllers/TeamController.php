@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 class TeamController extends Controller
 {
 
-    private function clearCache($userId, $team)
+    private function clearCache($userId, $team, $perPage = 30)
     {
         Cache::forget("teams_{$userId}_count");
 
@@ -23,11 +23,23 @@ class TeamController extends Controller
 
 
         if ($page !== null) {
-            Cache::forget($cacheKey);
+            $totalPages = ceil(Teams::byMemberId($userId)->withoutRevoked()->count() / $perPage);
+
+            for ($currentPage = $page; $currentPage <= $totalPages; $currentPage++) {
+                if (Cache::has("teams_{$userId}_page_{$page}_perPage_30")) {
+                    Cache::forget("teams_{$userId}_page_{$page}_perPage_30");
+                }
+            }
         }
 
         if ($pageWithRevoked !== null) {
-            Cache::forget($cacheKey."_with_revoked");
+            $totalPagesWithRevoked = ceil(Teams::byMemberId($userId)->count() / $perPage);
+
+            for ($currentPage = $page; $currentPage <= $totalPagesWithRevoked; $currentPage++) {
+                if (Cache::has("teams_{$userId}_page_{$page}_perPage_30_with_revoked")) {
+                    Cache::forget("teams_{$userId}_page_{$page}_perPage_30_with_revoked");
+                }
+            }
         }
     }
 
