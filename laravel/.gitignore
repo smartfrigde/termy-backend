@@ -5,7 +5,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
-/vendor
+/vendor/
 !/vendor/laravel/
 !/vendor/laravel/sail/
 !/vendor/laravel/sail/runtimes/
