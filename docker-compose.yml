@@ -57,7 +57,7 @@ services:
       context: ./ssh-server
       dockerfile: ./dockerfiles/Dockerfile.dev
     ports:
-      - "${SSH_PROXY_PORT:-8080}8080"
+      - "${SSH_PROXY_PORT:-8080}:8080"
     volumes:
       - ./ssh-server:/app
     networks:
