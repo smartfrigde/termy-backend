@@ -156,6 +156,9 @@ class TeamController extends Controller
 
 
         $this->clearCache($authUser->id, $team);
+        
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($team);
+        $this->synchronizationService->incrementSynchVersion($usersIds);
 
         $createdTeam = Teams::where("id", $team->id)
         ->with(['members' => function ($query) {
@@ -261,6 +264,9 @@ class TeamController extends Controller
 
         $this->clearCache($authUser->id, $teams);
 
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($teams);
+        $this->synchronizationService->incrementSynchVersion($usersIds);
+
         return response()->json([
             'team' => $teams,
         ], 200);
@@ -299,6 +305,9 @@ class TeamController extends Controller
         }
 
         $teams->update(['revoked' => true]);
+
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($teams);
+        $this->synchronizationService->incrementSynchVersion($usersIds);
 
         return response()->json(['message' => 'Team deleted successfully'], 200);
     }
@@ -388,6 +397,9 @@ class TeamController extends Controller
             return response()->json(['error' => 'Failed to add new member'], 500);
         }
 
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($teams);
+        $this->synchronizationService->incrementSynchVersion($usersIds);
+
         return response()->json([
             'member' => $newMember,
             'team' => $teams
@@ -461,6 +473,9 @@ class TeamController extends Controller
         $member->update(['permission_level_id' => $newRole]);
 
         $this->clearTeamMemberCache($teams, $member);
+
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($teams);
+        $this->synchronizationService->incrementSynchVersion($usersIds);
 
         return response()->json([
             'member' => $member,
@@ -545,6 +560,9 @@ class TeamController extends Controller
                 $randomMember->update(['permission_level_id' => TeamRole::OWNER->value]);
             }
         }
+
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($teams);
+        $this->synchronizationService->incrementSynchVersion($usersIds);
 
         return response()->json(['message' => 'Member removed successfully'], 200);
     }

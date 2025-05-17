@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\SynchronizationService;
 use App\Services\TokenService;
 use Illuminate\Http\Request;
 
 abstract class Controller
 {
     protected $tokenService;
+    protected $synchronizationService;
 
-    public function __construct(TokenService $tokenService)
+    public function __construct(TokenService $tokenService, SynchronizationService $synchronizationService)
     {
+        $this->synchronizationService = $synchronizationService;
         $this->tokenService = $tokenService;
     }
 

@@ -16,6 +16,10 @@ class SynchronizationService
     }
 
     public function getUserIdsFromTeam(Teams $team){
+        if ($team == null){
+            return [];
+        }
+        
         $usersIds = [];
 
         foreach ($team->user as $user){

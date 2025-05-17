@@ -12,32 +12,32 @@ use Illuminate\Support\Facades\Cache;
 
 class SshController extends Controller
 {
-private function clearCache($sshId, $teamId, $userId, $perPage = 30)
-{
-    Cache::forget("ssh_connections_{$userId}_{$teamId}_total_pages_per_page{$perPage}");
+    private function clearCache($sshId, $teamId, $userId, $perPage = 30)
+    {
+        Cache::forget("ssh_connections_{$userId}_{$teamId}_total_pages_per_page{$perPage}");
 
-    $page = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage);
-    $pageWithRevoked = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage, true);
+        $page = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage);
+        $pageWithRevoked = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage, true);
 
 
-    if ($page !== null) {
+        if ($page !== null) {
 
-        $totalPages = ceil(sshConnections::withoutRevoked()->where('team_id', $teamId)->count() / $perPage);
+            $totalPages = ceil(sshConnections::withoutRevoked()->where('team_id', $teamId)->count() / $perPage);
 
-        for ($currentPage = $page; $currentPage <= $totalPages; $currentPage++) {
-            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}");
-            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
+            for ($currentPage = $page; $currentPage <= $totalPages; $currentPage++) {
+                Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}");
+                Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
+            }
+        }
+
+        if ($pageWithRevoked !== null) {
+            $totalPagesWithRevoked = ceil(sshConnections::where('team_id', $teamId)->count() / $perPage);
+
+            for ($currentPage = $pageWithRevoked; $currentPage <= $totalPagesWithRevoked; $currentPage++) {
+                Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
+            }
         }
     }
-
-    if ($pageWithRevoked !== null) {
-        $totalPagesWithRevoked = ceil(sshConnections::where('team_id', $teamId)->count() / $perPage);
-
-        for ($currentPage = $pageWithRevoked; $currentPage <= $totalPagesWithRevoked; $currentPage++) {
-            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
-        }
-    }
-}
 
 
     private function calculatePageForShhConnection($sshConnectionId, $teamId, $perPage = 30, $getRevoked = false)
@@ -53,7 +53,7 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
 
         $sshConnections = $query->simplePaginate($perPage);
 
-        
+
         $sshIndex = $sshConnections->getCollection()->search(function ($item) use ($sshConnectionId) {
             return $item->id === $sshConnectionId;
         });
@@ -161,7 +161,6 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
         }
 
 
-        // Sprawdzenie, czy użytkownik należy do zespołu
         $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
             ->where('team_id', $sshData['team_id'])
             ->first();
@@ -189,8 +188,11 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
             ]);
         }
 
-        // Czyszczenie pamięci podręcznej
         $this->clearCache($sshConnection->id, $sshData['team_id'], $authUser->id, 30);
+
+        $team = Teams::find($sshData['team_id']) ?: null;
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($team) ?: [];
+        $this->synchronizationService->incrementSynchVersion($usersIds);
 
 
         return response()->json([
@@ -272,6 +274,10 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
 
         $this->clearCache($authUser->id,  isset($sshData["team_id"]) ? $sshData['team_id'] : $sshConnection->team_id, 30);
 
+        $team = Teams::find($sshData['team_id']) ?: null;
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($team) ?: [];
+        $this->synchronizationService->incrementSynchVersion($usersIds);
+
         return response()->json([
             "ssh_connection" => $sshConnection,
             "message" => "SSH connection updated successfully",
@@ -308,6 +314,10 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
         }
 
         $this->clearCache($authUser->id, $sshConnection->team_id, 30);
+
+        $team = Teams::find($sshConnection->team_id) ?: null;
+        $usersIds = $this->synchronizationService->getUserIdsFromTeam($team) ?: [];
+        $this->synchronizationService->incrementSynchVersion($usersIds);
 
         return response()->json([
             "message" => "SSH connection revoked successfully",
