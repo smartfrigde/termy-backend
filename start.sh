@@ -23,7 +23,7 @@ fi
 echo "Do you want to enable Laravel websocket for data synchronization (y/n)"
 read ws
 
-if ["$ws" != "n"]; then
+if [ "$ws" != "n" ]; then
     docker exec -it termy-laravel php artisan reverb:start
 fi
 
