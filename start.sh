@@ -20,11 +20,15 @@ if [ "$migrate" = "y" ]; then
     docker exec -it termy-laravel php artisan migrate
 fi
 
+echo "Do you want to enable Laravel websocket for data synchronization (y/n)"
+read ws
 
+if ["$ws" != "n"]; then
+    docker exec -it termy-laravel php artisan reverb:start
+fi
 
 echo "Do you want enter to laravel container console? (y/n)"
 read console
-
 if [ "$console" = "y" ]; then
     echo "Running docker container..."
     docker exec -it termy-laravel bash
