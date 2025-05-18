@@ -8,6 +8,11 @@ use Illuminate\Support\Str;
 
 class Teams extends Model
 {
+
+    /**
+     * @property mixed $user
+     **/
+
     protected $table = "teams";
     protected $fillable = [
         "user_id",
@@ -16,7 +21,7 @@ class Teams extends Model
         "revoked",
         "join_code"
     ];
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class);
     }
@@ -50,12 +55,12 @@ class Teams extends Model
     protected static function boot()
     {
         parent::boot();
-    
+
         static::creating(function ($team) {
             do {
                 $code = strtoupper(Str::random(7));
             } while (self::where('join_code', $code)->exists());
-    
+
             $team->join_code = $code;
         });
     }

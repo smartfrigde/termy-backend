@@ -7,19 +7,24 @@ use App\Models\Teams;
 
 class SynchronizationService
 {
-    public function incrementSynchVersion(array $usersIds){
+    public function incrementSyncVersion(array $usersIds): void
+    {
         synchronizationVersions::whereIn("user_id", $usersIds)->increment('version');
+
+        $usersAndSyncVersions = SynchronizationVersions::whereIn('user_id', $usersIds)->get('version', 'user_id');
     }
 
-    public function decrementSynchVersion(array $usersIds){
+    public function decrementSyncVersion(array $usersIds): void
+    {
         synchronizationVersions::whereIn('user_id', $usersIds)->decrement('version');
     }
 
-    public function getUserIdsFromTeam(Teams $team){
-        if ($team == null){
+    public function getUsersIdsFromTeam(Teams $team): array
+    {
+        if (!$team){
             return [];
         }
-        
+
         $usersIds = [];
 
         foreach ($team->user as $user){
@@ -27,5 +32,9 @@ class SynchronizationService
         }
 
         return $usersIds;
+    }
+
+    public function sendNotification(array $usersIds, array $data){
+
     }
 }

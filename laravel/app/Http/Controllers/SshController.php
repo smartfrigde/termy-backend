@@ -191,8 +191,8 @@ class SshController extends Controller
         $this->clearCache($sshConnection->id, $sshData['team_id'], $authUser->id, 30);
 
         $team = Teams::find($sshData['team_id']) ?: null;
-        $usersIds = $this->synchronizationService->getUserIdsFromTeam($team) ?: [];
-        $this->synchronizationService->incrementSynchVersion($usersIds);
+        $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
+        $this->synchronizationService->incrementSyncVersion($usersIds);
 
 
         return response()->json([
@@ -275,8 +275,8 @@ class SshController extends Controller
         $this->clearCache($authUser->id,  isset($sshData["team_id"]) ? $sshData['team_id'] : $sshConnection->team_id, 30);
 
         $team = Teams::find($sshData['team_id']) ?: null;
-        $usersIds = $this->synchronizationService->getUserIdsFromTeam($team) ?: [];
-        $this->synchronizationService->incrementSynchVersion($usersIds);
+        $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
+        $this->synchronizationService->incrementSyncVersion($usersIds);
 
         return response()->json([
             "ssh_connection" => $sshConnection,
@@ -316,8 +316,8 @@ class SshController extends Controller
         $this->clearCache($authUser->id, $sshConnection->team_id, 30);
 
         $team = Teams::find($sshConnection->team_id) ?: null;
-        $usersIds = $this->synchronizationService->getUserIdsFromTeam($team) ?: [];
-        $this->synchronizationService->incrementSynchVersion($usersIds);
+        $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
+        $this->synchronizationService->incrementSyncVersion($usersIds);
 
         return response()->json([
             "message" => "SSH connection revoked successfully",

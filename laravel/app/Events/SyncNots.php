@@ -12,18 +12,18 @@ class SyncNots implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    protected $userId;
+    private $userId;
+    private $message;
 
-    public function __construct($userId)
+    public function __construct($userId, $message)
     {
         $this->userId = $userId;
+        $this->message = $message;
     }
 
     public function broadcastOn(): array
     {
-        return [
-            new Channel('sync.user.' . $this->userId),
-        ];
+        return [new Channel('sync.user.' . $this->userId),];
     }
 
     public function broadcastAs(): string
@@ -33,8 +33,6 @@ class SyncNots implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        return [
-            'user_id' => $this->userId,
-        ];
+        return ['user_id' => $this->userId, 'message' => $this->message];
     }
 }
