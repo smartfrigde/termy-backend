@@ -28,8 +28,8 @@ class SynchronizationService
 
         $usersIds = [];
 
-        foreach ($team->user as $user){
-            $usersIds[] = $user->id;
+        foreach ($team->members as $member){
+            $usersIds[] = $member->user_id;
         }
 
         return $usersIds;
