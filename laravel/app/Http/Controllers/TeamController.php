@@ -87,28 +87,28 @@ class TeamController extends Controller
 
         $teams = Cache::remember("teams_{$authUser->id}_page_{$page}_perPage_{$perPage}", 1, function () use ($authUser, $offset, $perPage) {
             return Teams::byMemberId($authUser->id)
-            ->withoutRevoked()
-            ->withoutDefaultTeam()
-            ->orderBy('created_at', 'desc')
-            ->with(['members' => function ($query) {
-                $query->select('id', 'team_id', 'user_id', 'permission_level_id');
-            }])
-            ->offset($offset)
-            ->limit($perPage)
-            ->get()
-            ->map(function ($team) use ($authUser) {
-                $team->permission_in_team = optional(
-                    $team->members->where("user_id", $authUser->id)->first()
-                )->permission_level_id;
+                ->withoutRevoked()
+                ->withoutDefaultTeam()
+                ->orderBy('created_at', 'desc')
+                ->with(['members' => function ($query) {
+                    $query->select('id', 'team_id', 'user_id', 'permission_level_id');
+                }])
+                ->offset($offset)
+                ->limit($perPage)
+                ->get()
+                ->map(function ($team) use ($authUser) {
+                    $team->permission_in_team = optional(
+                        $team->members->where("user_id", $authUser->id)->first()
+                    )->permission_level_id;
 
-                unset($team->members);
+                    unset($team->members);
 
-                if (!TeamRole::hasHighestRole($team->permission_in_team, TeamRole::ADMINISTRATOR->value)){
-                    unset($team->join_code);
-                }
+                    if (!TeamRole::hasHighestRole($team->permission_in_team, TeamRole::ADMINISTRATOR->value)) {
+                        unset($team->join_code);
+                    }
 
-                return $team;
-            });
+                    return $team;
+                });
         });
 
         $totalItems = Teams::withoutRevoked()->byMemberId($authUser->id)->count();
@@ -159,25 +159,26 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team);
         $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersIds);
 
         $createdTeam = Teams::where("id", $team->id)
-        ->with(['members' => function ($query) {
-            $query->select('id', 'team_id', 'user_id', 'permission_level_id');
-        }])
-        ->get()
-        ->map(function ($team) use ($authUser) {
-            $team->permission_in_team = optional(
-                $team->members->where("user_id", $authUser->id)->first()
-            )->permission_level_id ?: 1;
+            ->with(['members' => function ($query) {
+                $query->select('id', 'team_id', 'user_id', 'permission_level_id');
+            }])
+            ->get()
+            ->map(function ($team) use ($authUser) {
+                $team->permission_in_team = optional(
+                    $team->members->where("user_id", $authUser->id)->first()
+                )->permission_level_id ?: 1;
 
-            unset($team->members);
+                unset($team->members);
 
-            if (!TeamRole::hasHighestRole($team->permission_in_team, TeamRole::ADMINISTRATOR->value)){
-                unset($team->join_code);
-            }
+                if (!TeamRole::hasHighestRole($team->permission_in_team, TeamRole::ADMINISTRATOR->value)) {
+                    unset($team->join_code);
+                }
 
-            return $team;
-        });
+                return $team;
+            });
 
         return response()->json([
             'team' => $createdTeam[0],
@@ -266,6 +267,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersIds);
 
         return response()->json([
             'team' => $teams,
@@ -308,6 +310,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersIds);
 
         return response()->json(['message' => 'Team deleted successfully'], 200);
     }
@@ -376,7 +379,7 @@ class TeamController extends Controller
 
         $authUser = $this->getUserFromToken($request);
 
-        if (!$authUser){
+        if (!$authUser) {
             return response()->json(['error' => 'Failed to add new member'], 500);
         }
 
@@ -399,7 +402,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $this->synchronizationService->incrementSyncVersion($usersIds);
-
+        $this->synchronizationService->sendNotification($usersIds);
         return response()->json([
             'member' => $newMember,
             'team' => $teams
@@ -476,7 +479,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $this->synchronizationService->incrementSyncVersion($usersIds);
-
+        $this->synchronizationService->sendNotification($usersIds);
         return response()->json([
             'member' => $member,
         ], 200);
@@ -563,7 +566,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $this->synchronizationService->incrementSyncVersion($usersIds);
-
+        $this->synchronizationService->sendNotification($usersIds);
         return response()->json(['message' => 'Member removed successfully'], 200);
     }
 
@@ -641,30 +644,30 @@ class TeamController extends Controller
         }
 
         $members = TeamsMembers::withoutRevoked()
-                ->where('user_id', $authUser->id)
-                ->where('team_id', $teamId)
-                ->orderBy('created_at', 'desc')
-                ->with(['user' => function ($query) {
-                    $query->select('id', 'name', 'email', 'surname', 'profile_image');
-                }])
-                ->select('team_id', 'revoked', 'user_id', 'permission_level_id')
-                ->get()
-                ->map(function ($member) {
-                    // Sprawdzamy, czy użytkownik istnieje
-                    $user = $member->user;
-                    if ($user) {
-                        return [
-                            'team_id' => $member->team_id,
-                            'permission_level_id' => $member->permission_level_id,
-                            'id' => $user->id,
-                            'name' => $user->name,
-                            'email' => $user->email,
-                            'surname' => $user->surname,
-                            'profile_image' => $user->profile_image,
-                        ];
-                    }
-                    return null;
-                })->filter();
+            ->where('user_id', $authUser->id)
+            ->where('team_id', $teamId)
+            ->orderBy('created_at', 'desc')
+            ->with(['user' => function ($query) {
+                $query->select('id', 'name', 'email', 'surname', 'profile_image');
+            }])
+            ->select('team_id', 'revoked', 'user_id', 'permission_level_id')
+            ->get()
+            ->map(function ($member) {
+                // Sprawdzamy, czy użytkownik istnieje
+                $user = $member->user;
+                if ($user) {
+                    return [
+                        'team_id' => $member->team_id,
+                        'permission_level_id' => $member->permission_level_id,
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'surname' => $user->surname,
+                        'profile_image' => $user->profile_image,
+                    ];
+                }
+                return null;
+            })->filter();
 
         return response()->json([
             'member' => $members,

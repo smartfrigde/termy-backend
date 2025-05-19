@@ -13,6 +13,6 @@ class WsController extends Controller
 
         $authUserId = $authUser->id;
 
-        return $authUser === $id;
+        return $authUserId === $id;
     }
 }

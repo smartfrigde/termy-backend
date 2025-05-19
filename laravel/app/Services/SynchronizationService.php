@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\SyncNots;
 use App\Models\synchronizationVersions;
 use App\Models\Teams;
 
@@ -34,7 +35,14 @@ class SynchronizationService
         return $usersIds;
     }
 
-    public function sendNotification(array $usersIds, array $data){
+    public function sendNotification(array $usersIds): void{
 
+        if (empty($usersIds)) {
+            return;
+        }
+
+        foreach ($usersIds as $userId){
+            event(new SyncNots($userId, `{ 'type': 'report_new_sync_version', 'content': 'user has new synchronization version', 'recipient': '{$userId}' }`));
+        }
     }
 }

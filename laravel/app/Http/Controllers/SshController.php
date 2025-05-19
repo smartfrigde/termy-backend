@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 
 class SshController extends Controller
 {
-    private function clearCache($sshId, $teamId, $userId, $perPage = 30)
+    private function clearCache($sshId, $teamId, $userId, $perPage = 30): void
     {
         Cache::forget("ssh_connections_{$userId}_{$teamId}_total_pages_per_page{$perPage}");
 
@@ -40,7 +40,7 @@ class SshController extends Controller
     }
 
 
-    private function calculatePageForShhConnection($sshConnectionId, $teamId, $perPage = 30, $getRevoked = false)
+    private function calculatePageForShhConnection($sshConnectionId, $teamId, $perPage = 30, $getRevoked = false): ?float
     {
         $query = sshConnections::where('team_id', $teamId)
             ->orderBy('created_at', 'desc');
@@ -67,13 +67,11 @@ class SshController extends Controller
 
     private function getDefaultUserTeam($userId)
     {
-        $defaultTeam = Teams::where('type', 'default_user_team')
+        return Teams::where('type', 'default_user_team')
             ->whereHas('members', function ($query) use ($userId) {
                 $query->where('user_id', $userId);
             })
             ->first();
-
-        return $defaultTeam;
     }
 
     public function index(Request $request)
@@ -193,6 +191,7 @@ class SshController extends Controller
         $team = Teams::find($sshData['team_id']) ?: null;
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
         $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersIds);
 
 
         return response()->json([
@@ -277,6 +276,7 @@ class SshController extends Controller
         $team = Teams::find($sshData['team_id']) ?: null;
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
         $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersIds);
 
         return response()->json([
             "ssh_connection" => $sshConnection,
@@ -318,6 +318,7 @@ class SshController extends Controller
         $team = Teams::find($sshConnection->team_id) ?: null;
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
         $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersIds);
 
         return response()->json([
             "message" => "SSH connection revoked successfully",
