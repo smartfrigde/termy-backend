@@ -117,8 +117,9 @@ class UserController extends Controller
         ]);
 
         $this->synchronizationService->incrementSyncVersion([ $user->id ]);
+        $this->synchronizationService->sendNotification([$user->id]);
 
-        return response()->json(['user' => $user], 200);
+        return $this->sendResponse(['user' => $user], 200, $authUser->id);
     }
 
     public function destroy(Request $request, $id)
