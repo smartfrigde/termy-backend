@@ -79,7 +79,7 @@ class SshController extends Controller
         $authUser = $this->getUserFromToken($request);
 
         if (!$authUser) {
-            return response()->json(['error' => "User not found"], 404);
+            return $this->sendResponse(['error' => "User not found"], 404, userId: $authUser->id);
         }
 
         $page = $request->input("page", 1);
@@ -92,7 +92,7 @@ class SshController extends Controller
             $defaultTeam = $this->getDefaultUserTeam($authUser->id);
 
             if (!$defaultTeam) {
-                return response()->json(['error' => "Default team not found"], 404);
+                return $this->sendResponse(['error' => "Default team not found"], 404, userId: $authUser->id);
             }
 
             $teamId = $defaultTeam->id;
@@ -122,11 +122,11 @@ class SshController extends Controller
             return ceil(sshConnections::withoutRevoked()->where('team_id', $teamId)->count() / $perPage);
         });
 
-        return response()->json([
+        return $this->sendResponse([
             "ssh_connections" => $sshServers,
             "total_pages" => $totalPages,
             "current_page" => $page,
-        ], 200);
+        ], 200, userId: $authUser->id);
     }
 
     public function store(Request $request)
@@ -152,7 +152,7 @@ class SshController extends Controller
 
 
             if (!$defaultTeam) {
-                return response()->json(['error' => "Default team not found"], 404);
+                return $this->sendResponse(['error' => "Default team not found"], 404, userId: $authUser->id);
             }
 
             $sshData["team_id"] = $defaultTeam->id;
@@ -164,17 +164,17 @@ class SshController extends Controller
             ->first();
 
         if (!$userInTeam) {
-            return response()->json(['error' => "User isn't a team member"], 403);
+            return $this->sendResponse(['error' => "User isn't a team member"], 403, userId: $authUser->id);
         }
 
         if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
-            return response()->json(['error' => "Permission denied"], 403);
+            return $this->sendResponse(['error' => "Permission denied"], 403, userId: $authUser->id);
         }
 
         $sshConnection = sshConnections::create($sshData);
 
         if (!$sshConnection) {
-            return response()->json(['error' => "Failed to create SSH connection"], 500);
+            return $this->sendResponse(['error' => "Failed to create SSH connection"], 500, userId: $authUser->id);
         }
 
         $gpgKey = null;
@@ -194,11 +194,11 @@ class SshController extends Controller
         $this->synchronizationService->sendNotification($usersIds);
 
 
-        return response()->json([
+        return $this->sendResponse([
             "ssh_connection" => $sshConnection,
             "gpg_key" => $gpgKey ?: null,
             "message" => "SSH connection and GPG key created successfully",
-        ], 201);
+        ], 201, userId: $authUser->id);
     }
 
     public function update(Request $request, $sshId): \Illuminate\Http\JsonResponse
@@ -223,7 +223,7 @@ class SshController extends Controller
             $defaultTeam = $this->getDefaultUserTeam($authUser->id);
 
             if (!$defaultTeam) {
-                return response()->json(['error' => "Default team not found"], 404);
+                return $this->sendResponse(['error' => "Default team not found"], 404, userId: $authUser->id);
             }
 
             $sshData['team_id'] = $defaultTeam->id;
@@ -237,7 +237,7 @@ class SshController extends Controller
         $sshConnection = sshConnections::find($sshId);
 
         if (!$sshConnection) {
-            return response()->json(['error' => "SSH connection not found"], 404);
+            return $this->sendResponse(['error' => "SSH connection not found"], 404, userId: $authUser->id);
         }
 
         $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
@@ -245,11 +245,11 @@ class SshController extends Controller
             ->first();
 
         if (!$userInTeam) {
-            return response()->json(['error' => "User isn't a team member"], 403);
+            return $this->sendResponse(['error' => "User isn't a team member"], 403, userId: $authUser->id);
         }
 
         if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
-            return response()->json(['error' => "Permission denied"], 403);
+            return $this->sendResponse(['error' => "Permission denied"], 403, userId: $authUser->id);
         }
 
         $sshConnection->update($sshData);
@@ -278,32 +278,33 @@ class SshController extends Controller
         $this->synchronizationService->incrementSyncVersion($usersIds);
         $this->synchronizationService->sendNotification($usersIds);
 
-        return response()->json([
+        return $this->sendResponse([
             "ssh_connection" => $sshConnection,
             "message" => "SSH connection updated successfully",
-        ], 200);
+        ], 200, userId: $authUser->id);
     }
 
     public function destroy($sshConnectionsId, Request $request)
     {
         $sshConnection = sshConnections::findOrFail($sshConnectionsId);
 
-        if (!$sshConnection) {
-            return response()->json(['error' => "SSH connection not found"], 404);
-        }
-
+        
         $authUser = $this->getUserFromToken($request);
+
+        if (!$sshConnection) {
+            return $this->sendResponse(['error' => "SSH connection not found"], 404, userId: $authUser->id);
+        }
 
         $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
             ->where('team_id', $sshConnection->team_id)
             ->first();
 
         if (!$userInTeam) {
-            return response()->json(['error' => "User isn't a team member"], 403);
+            return $this->sendResponse(['error' => "User isn't a team member"], 403, userId: $authUser->id);
         }
 
         if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
-            return response()->json(['error' => "Permission denied"], 403);
+            return $this->sendResponse(['error' => "Permission denied"], 403, userId: $authUser->id);
         }
 
         if ($sshConnection->revoked === true) {
@@ -320,8 +321,8 @@ class SshController extends Controller
         $this->synchronizationService->incrementSyncVersion($usersIds);
         $this->synchronizationService->sendNotification($usersIds);
 
-        return response()->json([
+        return $this->sendResponse([
             "message" => "SSH connection revoked successfully",
-        ], 200);
+        ], 200, userId: $authUser->id);
     }
 }

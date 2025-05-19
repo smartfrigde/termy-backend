@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\synchronizationVersions;
 use App\Services\SynchronizationService;
 use App\Services\TokenService;
 use Illuminate\Http\Request;
@@ -31,5 +32,11 @@ abstract class Controller
         }
 
         return null;
+    }
+
+    protected function sendResponse($data, $code, $userId){
+        $syncV = synchronizationVersions::where("user_id", $userId)->first();
+        $data["sync_version"] = $syncV->version ?: 0;
+        return response()->json($data, $code);
     }
 }
