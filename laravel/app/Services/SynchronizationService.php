@@ -45,4 +45,18 @@ class SynchronizationService
             event(new SyncNots($userId, `{ 'type': 'report_new_sync_version', 'content': 'user has new synchronization version', 'recipient': '{$userId}' }`));
         }
     }
+
+    public function checkSyncVersion($syncVersion, $userId){
+        if (empty($syncVersion)) {
+            return false;
+        }
+
+        if (empty($userId)) {
+            return false;
+        }
+
+        $syncVersionInDb = synchronizationVersions::where('user_id', $userId)->get("version");
+
+        return $syncVersionInDb->version === $syncVersion;
+    }
 }
