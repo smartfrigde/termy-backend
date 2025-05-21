@@ -116,8 +116,8 @@ class UserController extends Controller
             'password' => $request->has('password') ? bcrypt($request->password) : $user->password,
         ]);
 
-        $this->synchronizationService->incrementSyncVersion([ $user->id ]);
-        $this->synchronizationService->sendNotification([$user->id]);
+        $usersAndHisVersions = $this->synchronizationService->incrementSyncVersion([ $user->id ]);
+        $this->synchronizationService->sendNotification($usersAndHisVersions);
 
         return $this->sendResponse(['user' => $user], 200, $authUser->id);
     }

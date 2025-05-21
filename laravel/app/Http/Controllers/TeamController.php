@@ -158,8 +158,8 @@ class TeamController extends Controller
         $this->clearCache($authUser->id, $team);
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team);
-        $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersIds);
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
 
         $createdTeam = Teams::where("id", $team->id)
             ->with(['members' => function ($query) {
@@ -266,8 +266,8 @@ class TeamController extends Controller
         $this->clearCache($authUser->id, $teams);
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
-        $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersIds);
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
 
         return $this->sendResponse([
             'team' => $teams,
@@ -309,8 +309,8 @@ class TeamController extends Controller
         $teams->update(['revoked' => true]);
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
-        $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersIds);
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
 
         return $this->sendResponse(['message' => 'Team deleted successfully'], 200, userId: $authUser->id);
     }
@@ -401,8 +401,8 @@ class TeamController extends Controller
         }
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
-        $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersIds);
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
         return $this->sendResponse([
             'member' => $newMember,
             'team' => $teams
@@ -478,8 +478,8 @@ class TeamController extends Controller
         $this->clearTeamMemberCache($teams, $member);
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
-        $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersIds);
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
         return $this->sendResponse([
             'member' => $member,
         ], 200, userId: $authUser->id);
@@ -565,8 +565,8 @@ class TeamController extends Controller
         }
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
-        $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersIds);
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
         return $this->sendResponse(['message' => 'Member removed successfully'], 200, userId: $authUser->id);
     }
 

@@ -8,10 +8,19 @@ use App\Models\Teams;
 
 class SynchronizationService
 {
-    public function incrementSyncVersion(array $usersIds): void
+    public function incrementSyncVersion(array $usersIds): array
     {
         synchronizationVersions::whereIn("user_id", $usersIds)->increment('version');
+
+        return synchronizationVersions::whereIn("user_id", $usersIds)
+            ->get(['user_id', 'version'])
+            ->map(fn($row) => [
+                'user_id' => $row->user_id,
+                'syncVersion' => $row->version,
+            ])
+            ->toArray();
     }
+
 
     public function decrementSyncVersion(array $usersIds): void
     {
@@ -20,32 +29,40 @@ class SynchronizationService
 
     public function getUsersIdsFromTeam(Teams $team): array
     {
-        if (!$team){
+        if (!$team) {
             return [];
         }
 
         $usersIds = [];
 
-        foreach ($team->members as $member){
+        foreach ($team->members as $member) {
             $usersIds[] = $member->user_id;
         }
 
         return $usersIds;
     }
 
-    public function sendNotification(array $usersIds): void{
-
-        
-        if (empty($usersIds)) {
+    public function sendNotification(array $usersData): void
+    {
+        if (empty($usersData)) {
             return;
         }
 
-        foreach ($usersIds as $userId){
-            event(new SyncNots($userId, "{ 'type': 'report_new_sync_version', 'content': 'user has new synchronization version', 'recipient': '{$userId}' }"));
+        foreach ($usersData as $userData) {
+            $payload = [
+                'new_synchronization_version' => $userData['syncVersion'],
+                'type' => 'report_new_sync_version',
+                'content' => 'User has new synchronization version',
+                'recipient' => $userData['user_id'],
+            ];
+
+            event(new SyncNots($userData['user_id'], json_encode($payload)));
         }
     }
 
-    public function checkSyncVersion($syncVersion, $userId){
+
+    public function checkSyncVersion($syncVersion, $userId)
+    {
         if (empty($syncVersion)) {
             return false;
         }
