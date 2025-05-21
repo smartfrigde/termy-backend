@@ -12,8 +12,7 @@ Route::middleware([BypassCsrfMiddleware::class])->group(function () {
     });
 
     Broadcast::channel('sync.user.{id}', function ($user, $id) {
-        // return (int) $user->id === (int) $id;
-        return true;
+        return (int) $user->id === (int) $id;
     });
 });
 

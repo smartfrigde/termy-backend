@@ -7,6 +7,8 @@ use App\Http\Middleware\AuthenticatedWithToken;
 use App\Http\Controllers\SshController;
 use App\Http\Middleware\BypassCsrfMiddleware;
 
+require __DIR__ ."/channels.php";
+
 Route::middleware(BypassCsrfMiddleware::class)->group(function () {
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::post('/login', [UserController::class, 'login'])->name('login');
