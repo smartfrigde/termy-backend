@@ -15,6 +15,7 @@ class GpgKeys extends Model
         'password',
         'revoked',
     ];
+    
 
     public function sshConnection()
     {
