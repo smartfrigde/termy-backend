@@ -11,13 +11,14 @@ class GpgKeys extends Model
     protected $fillable = [
         'private_key',
         'public_key',
-        'ssh_connection_id',
+        'name',
+        'password',
         'revoked',
     ];
 
     public function sshConnection()
     {
-        return $this->belongsTo(SshConnections::class, 'ssh_connection_id');
+        return $this->hasMany(SshConnections::class);
     }
     public function scopeRevoked($query)
     {

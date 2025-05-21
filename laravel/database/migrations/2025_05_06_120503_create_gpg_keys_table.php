@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('gpg_keys', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ssh_connection_id')->constrained('ssh_connections')->onDelete('cascade')->comment('ID połączenia SSH, do którego należy ten klucz GPG');
-            $table->text('public_key')->comment('Klucz publiczny GPG');
-            $table->text('private_key')->nullable()->comment('Klucz prywatny GPG (opcjonalny)');
-            $table->boolean('revoked')->default(false)->comment('Czy klucz został unieważniony');
-            $table->timestamp('expires_at')->nullable()->comment('Data wygaśnięcia klucza');
+            $table->string('name');
+            $table->string('password')->nullable();
+            $table->text('public_key')->nullable();
+            $table->text('private_key');
+            $table->boolean('revoked')->default(false);
             $table->timestamps();
         });
     }

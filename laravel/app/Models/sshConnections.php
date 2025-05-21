@@ -14,6 +14,7 @@ class sshConnections extends Model
         'port',
         'name',
         'password',
+        'key_id',
         'team_id',
         'revoked',
     ];
@@ -25,7 +26,7 @@ class sshConnections extends Model
 
     public function gpgKey()
     {
-        return $this->hasOne(GpgKeys::class, 'ssh_connection_id');
+        return $this->belongsTo(GpgKeys::class, 'key_id');
     }
     public function scopeRevoked($query)
     {

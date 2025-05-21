@@ -20,6 +20,7 @@ return new class extends Migration
             $table->longText("password")->nullable()->comment('The password for SSH authentication');
             $table->foreignId('team_id')->nullable()->constrained('teams')->onDelete('cascade')->comment('The ID of the team that owns this SSH connection');
             $table->boolean('revoked')->default(false)->comment('Indicates if the SSH connection has been revoked');
+            $table->foreignId('key_id')->nullable()->constrained('')->onDelete('')->comment('');
             $table->timestamps();
         });
     }
