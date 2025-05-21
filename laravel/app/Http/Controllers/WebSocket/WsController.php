@@ -4,6 +4,7 @@ namespace App\Http\Controllers\WebSocket;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 
 class WsController extends Controller
 {
@@ -14,5 +15,16 @@ class WsController extends Controller
         $authUserId = $authUser->id;
 
         return $authUserId === $id;
+    }
+
+    public function auth(Request $request)
+    {
+        $user = $this->getUserFromToken($request);
+
+        $request->setUserResolver(function () use ($user) {
+            return $user;
+        });
+
+        return Broadcast::auth($request);
     }
 }

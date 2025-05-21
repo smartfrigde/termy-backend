@@ -11,8 +11,6 @@ class SynchronizationService
     public function incrementSyncVersion(array $usersIds): void
     {
         synchronizationVersions::whereIn("user_id", $usersIds)->increment('version');
-
-        $usersAndSyncVersions = SynchronizationVersions::whereIn('user_id', $usersIds)->get('version', 'user_id');
     }
 
     public function decrementSyncVersion(array $usersIds): void
@@ -37,12 +35,13 @@ class SynchronizationService
 
     public function sendNotification(array $usersIds): void{
 
+        
         if (empty($usersIds)) {
             return;
         }
 
         foreach ($usersIds as $userId){
-            event(new SyncNots($userId, `{ 'type': 'report_new_sync_version', 'content': 'user has new synchronization version', 'recipient': '{$userId}' }`));
+            event(new SyncNots($userId, "{ 'type': 'report_new_sync_version', 'content': 'user has new synchronization version', 'recipient': '{$userId}' }"));
         }
     }
 

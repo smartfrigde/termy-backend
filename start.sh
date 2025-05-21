@@ -24,7 +24,7 @@ echo "Do you want to enable Laravel websocket for data synchronization (y/n)"
 read ws
 
 if [ "$ws" != "n" ]; then
-    docker exec -it termy-laravel php artisan reverb:start
+    docker exec -it termy-laravel php artisan queue:work && php reverb:start
 fi
 
 echo "Do you want enter to laravel container console? (y/n)"

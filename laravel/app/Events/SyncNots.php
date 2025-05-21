@@ -7,6 +7,8 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Broadcasting\PrivateChannel;
 
 class SyncNots implements ShouldBroadcast
 {
@@ -21,18 +23,26 @@ class SyncNots implements ShouldBroadcast
         $this->message = $message;
     }
 
-    public function broadcastOn(): array
+    public function broadcastOn()
     {
-        return [new Channel('sync.user.' . $this->userId),];
+        return new PrivateChannel('sync.user.{$this->userId}');
     }
 
-    public function broadcastAs(): string
+    public function broadcastAs()
     {
         return 'sync.nots';
     }
 
-    public function broadcastWith(): array
+    public function broadcastWith()
     {
-        return ['user_id' => $this->userId, 'message' => $this->message];
+        Log::info('📤 broadcastWith SyncNots', [
+            'user_id' => $this->userId,
+            'message' => $this->message,
+        ]);
+
+        return [
+            'user_id' => $this->userId,
+            'message' => $this->message,
+        ];
     }
 }

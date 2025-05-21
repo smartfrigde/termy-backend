@@ -22,7 +22,7 @@ if /I "%migrate%"=="y" (
 set /p ws=Do you want to enable Laravel websocket for data synchronization (y/n):
 
 if /I not "%ws%"=="n" (
-    docker exec -it termy-laravel php artisan reverb:start
+    docker exec -it termy-laravel php artisan queue:work & php reverb:start
 )
 
 set /p console=Do you want to enter laravel container console? (y/n):
