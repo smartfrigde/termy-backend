@@ -25,8 +25,10 @@ class SyncNots implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('sync.user.{$this->userId}');
+        $name = 'sync.user.' . $this->userId;
+        return new PrivateChannel($name);
     }
+
 
     public function broadcastAs()
     {
