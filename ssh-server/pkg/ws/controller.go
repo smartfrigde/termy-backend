@@ -2,10 +2,11 @@ package ws
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
-	"fmt"
 	"ssh-server/pkg/sshconn"
+	"strconv"
 )
 
 func (c *Client) read() {
@@ -25,66 +26,67 @@ func (c *Client) read() {
 		}
 
 		switch arrayMessage["type"] {
-			case "connect":
-				if arrayMessage["hostname"] != nil && arrayMessage["login"] != nil && arrayMessage["port"] != nil {
-					host := fmt.Sprintf("%s:%v", arrayMessage["hostname"], arrayMessage["port"])
-					login := arrayMessage["login"].(string)
-					password := ""
+		case "connect":
+			if arrayMessage["hostname"] != nil && arrayMessage["login"] != nil && arrayMessage["port"] != nil {
+				host := fmt.Sprintf("%s:%v", arrayMessage["hostname"], arrayMessage["port"])
+				login := arrayMessage["login"].(string)
+				password := ""
 
-					if arrayMessage["password"] != nil {
-						password = arrayMessage["password"].(string)
-					}
+				if arrayMessage["password"] != nil {
+					password = arrayMessage["password"].(string)
+				}
 
-					fmt.Println(login, password, host)
+				fmt.Println(login, password, host)
 
-					sshClient, err := sshconn.Connect(login, password, host)
+				sshClient, err := sshconn.Connect(login, password, host)
 
-					if err != nil {
-						log.Println("SSH błąd:", err)
-						c.Send <- []byte("Nie udało się połączyć z SSH")
-						continue
-					}
+				if err != nil {
+					log.Println("SSH błąd:", err)
+					c.Send <- []byte("Nie udało się połączyć z SSH")
+					continue
+				}
 
-					session, stdin, stdout, err := sshClient.Connect()
+				session, stdin, stdout, err := sshClient.Connect()
 
-					if err != nil {
-						log.Println("Sesja SSH nie powiodła się:", err)
-						continue
-					}
+				if err != nil {
+					log.Println("Sesja SSH nie powiodła się:", err)
+					continue
+				}
 
-					c.SSH = session
-					c.Stdin = stdin
-					c.Stdout = stdout
+				c.SSH = session
+				c.Stdin = stdin
+				c.Stdout = stdout
 
-					go func() {
-						buf := make([]byte, 1024)
-						for {
-							n, err := stdout.Read(buf)
-							if err != nil {
-								log.Println("Błąd stdout:", err)
-								break
-							}
-							
-							c.Send <- buf[:n]
+				go func() {
+					buf := make([]byte, 1024)
+					for {
+						n, err := stdout.Read(buf)
+						if err != nil {
+							log.Println("Błąd stdout:", err)
+							break
 						}
-					}()
 
-				}
-
-			case "command":
-				if content, ok := arrayMessage["content"].(string); ok && c.Stdin != nil {
-					var data []byte
-					switch content {
-					default:
-						data = []byte(content)
+						c.Send <- buf[:n]
 					}
+				}()
 
-					_, err := c.Stdin.Write(data)
-					if err != nil {
-						log.Println("Błąd przy pisaniu do SSH:", err)
-					}
-				}
 			}
+
+		case "command":
+			if content, ok := arrayMessage["content"].(string); ok && c.Stdin != nil {
+				unquoted, err := strconv.Unquote(`"` + content + `"`)
+				if err != nil {
+					log.Println("Błąd unquote:", err)
+					continue
+				}
+
+				_, err = c.Stdin.Write([]byte(unquoted))
+				if err != nil {
+					log.Println("Błąd przy pisaniu do SSH:", err)
+				}
+
+			}
+		}
 	}
 }
 
