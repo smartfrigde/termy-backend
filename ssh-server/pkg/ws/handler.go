@@ -1,19 +1,19 @@
 package ws
 
 import (
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"sync"
-	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 var (
 	upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
-                                  		return true // ✅ Accept all origins
-                                  	},}
-	clients  = make(map[string]*Client)
-	mu       sync.Mutex
+		return true
+	}}
+	clients = make(map[string]*Client)
+	mu      sync.Mutex
 )
 
 func HandleWebsocket(w http.ResponseWriter, r *http.Request) {

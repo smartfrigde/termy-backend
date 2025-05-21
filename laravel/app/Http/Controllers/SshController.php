@@ -12,35 +12,35 @@ use Illuminate\Support\Facades\Cache;
 
 class SshController extends Controller
 {
-private function clearCache($sshId, $teamId, $userId, $perPage = 30)
-{
-    Cache::forget("ssh_connections_{$userId}_{$teamId}_total_pages_per_page{$perPage}");
+    private function clearCache($sshId, $teamId, $userId, $perPage = 30): void
+    {
+        Cache::forget("ssh_connections_{$userId}_{$teamId}_total_pages_per_page{$perPage}");
 
-    $page = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage);
-    $pageWithRevoked = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage, true);
+        $page = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage);
+        $pageWithRevoked = $this->calculatePageForShhConnection($sshId, $teamId, $userId, $perPage, true);
 
 
-    if ($page !== null) {
+        if ($page !== null) {
 
-        $totalPages = ceil(sshConnections::withoutRevoked()->where('team_id', $teamId)->count() / $perPage);
+            $totalPages = ceil(sshConnections::withoutRevoked()->where('team_id', $teamId)->count() / $perPage);
 
-        for ($currentPage = $page; $currentPage <= $totalPages; $currentPage++) {
-            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}");
-            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
+            for ($currentPage = $page; $currentPage <= $totalPages; $currentPage++) {
+                Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}");
+                Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
+            }
+        }
+
+        if ($pageWithRevoked !== null) {
+            $totalPagesWithRevoked = ceil(sshConnections::where('team_id', $teamId)->count() / $perPage);
+
+            for ($currentPage = $pageWithRevoked; $currentPage <= $totalPagesWithRevoked; $currentPage++) {
+                Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
+            }
         }
     }
 
-    if ($pageWithRevoked !== null) {
-        $totalPagesWithRevoked = ceil(sshConnections::where('team_id', $teamId)->count() / $perPage);
 
-        for ($currentPage = $pageWithRevoked; $currentPage <= $totalPagesWithRevoked; $currentPage++) {
-            Cache::forget("ssh_connections_{$userId}_{$currentPage}_{$perPage}_with_revoked");
-        }
-    }
-}
-
-
-    private function calculatePageForShhConnection($sshConnectionId, $teamId, $perPage = 30, $getRevoked = false)
+    private function calculatePageForShhConnection($sshConnectionId, $teamId, $perPage = 30, $getRevoked = false): ?float
     {
         $query = sshConnections::where('team_id', $teamId)
             ->orderBy('created_at', 'desc');
@@ -53,7 +53,7 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
 
         $sshConnections = $query->simplePaginate($perPage);
 
-        
+
         $sshIndex = $sshConnections->getCollection()->search(function ($item) use ($sshConnectionId) {
             return $item->id === $sshConnectionId;
         });
@@ -67,13 +67,11 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
 
     private function getDefaultUserTeam($userId)
     {
-        $defaultTeam = Teams::where('type', 'default_user_team')
+        return Teams::where('type', 'default_user_team')
             ->whereHas('members', function ($query) use ($userId) {
                 $query->where('user_id', $userId);
             })
             ->first();
-
-        return $defaultTeam;
     }
 
     public function index(Request $request)
@@ -81,7 +79,7 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
         $authUser = $this->getUserFromToken($request);
 
         if (!$authUser) {
-            return response()->json(['error' => "User not found"], 404);
+            return $this->sendResponse(['error' => "User not found"], 404, userId: $authUser->id);
         }
 
         $page = $request->input("page", 1);
@@ -94,7 +92,7 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
             $defaultTeam = $this->getDefaultUserTeam($authUser->id);
 
             if (!$defaultTeam) {
-                return response()->json(['error' => "Default team not found"], 404);
+                return $this->sendResponse(['error' => "Default team not found"], 404, userId: $authUser->id);
             }
 
             $teamId = $defaultTeam->id;
@@ -124,11 +122,11 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
             return ceil(sshConnections::withoutRevoked()->where('team_id', $teamId)->count() / $perPage);
         });
 
-        return response()->json([
+        return $this->sendResponse([
             "ssh_connections" => $sshServers,
             "total_pages" => $totalPages,
             "current_page" => $page,
-        ], 200);
+        ], 200, userId: $authUser->id);
     }
 
     public function store(Request $request)
@@ -154,30 +152,29 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
 
 
             if (!$defaultTeam) {
-                return response()->json(['error' => "Default team not found"], 404);
+                return $this->sendResponse(['error' => "Default team not found"], 404, userId: $authUser->id);
             }
 
             $sshData["team_id"] = $defaultTeam->id;
         }
 
 
-        // Sprawdzenie, czy użytkownik należy do zespołu
         $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
             ->where('team_id', $sshData['team_id'])
             ->first();
 
         if (!$userInTeam) {
-            return response()->json(['error' => "User isn't a team member"], 403);
+            return $this->sendResponse(['error' => "User isn't a team member"], 403, userId: $authUser->id);
         }
 
         if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
-            return response()->json(['error' => "Permission denied"], 403);
+            return $this->sendResponse(['error' => "Permission denied"], 403, userId: $authUser->id);
         }
 
         $sshConnection = sshConnections::create($sshData);
 
         if (!$sshConnection) {
-            return response()->json(['error' => "Failed to create SSH connection"], 500);
+            return $this->sendResponse(['error' => "Failed to create SSH connection"], 500, userId: $authUser->id);
         }
 
         $gpgKey = null;
@@ -189,15 +186,19 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
             ]);
         }
 
-        // Czyszczenie pamięci podręcznej
         $this->clearCache($sshConnection->id, $sshData['team_id'], $authUser->id, 30);
 
+        $team = Teams::find($sshData['team_id']) ?: null;
+        $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
 
-        return response()->json([
+
+        return $this->sendResponse([
             "ssh_connection" => $sshConnection,
             "gpg_key" => $gpgKey ?: null,
             "message" => "SSH connection and GPG key created successfully",
-        ], 201);
+        ], 201, userId: $authUser->id);
     }
 
     public function update(Request $request, $sshId): \Illuminate\Http\JsonResponse
@@ -222,7 +223,7 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
             $defaultTeam = $this->getDefaultUserTeam($authUser->id);
 
             if (!$defaultTeam) {
-                return response()->json(['error' => "Default team not found"], 404);
+                return $this->sendResponse(['error' => "Default team not found"], 404, userId: $authUser->id);
             }
 
             $sshData['team_id'] = $defaultTeam->id;
@@ -236,7 +237,7 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
         $sshConnection = sshConnections::find($sshId);
 
         if (!$sshConnection) {
-            return response()->json(['error' => "SSH connection not found"], 404);
+            return $this->sendResponse(['error' => "SSH connection not found"], 404, userId: $authUser->id);
         }
 
         $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
@@ -244,11 +245,11 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
             ->first();
 
         if (!$userInTeam) {
-            return response()->json(['error' => "User isn't a team member"], 403);
+            return $this->sendResponse(['error' => "User isn't a team member"], 403, userId: $authUser->id);
         }
 
         if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
-            return response()->json(['error' => "Permission denied"], 403);
+            return $this->sendResponse(['error' => "Permission denied"], 403, userId: $authUser->id);
         }
 
         $sshConnection->update($sshData);
@@ -272,32 +273,38 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
 
         $this->clearCache($authUser->id,  isset($sshData["team_id"]) ? $sshData['team_id'] : $sshConnection->team_id, 30);
 
-        return response()->json([
+        $team = Teams::find($sshData['team_id']) ?: null;
+        $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
+
+        return $this->sendResponse([
             "ssh_connection" => $sshConnection,
             "message" => "SSH connection updated successfully",
-        ], 200);
+        ], 200, userId: $authUser->id);
     }
 
     public function destroy($sshConnectionsId, Request $request)
     {
         $sshConnection = sshConnections::findOrFail($sshConnectionsId);
 
-        if (!$sshConnection) {
-            return response()->json(['error' => "SSH connection not found"], 404);
-        }
-
+        
         $authUser = $this->getUserFromToken($request);
+
+        if (!$sshConnection) {
+            return $this->sendResponse(['error' => "SSH connection not found"], 404, userId: $authUser->id);
+        }
 
         $userInTeam = TeamsMembers::withoutRevoked()->where('user_id', $authUser->id)
             ->where('team_id', $sshConnection->team_id)
             ->first();
 
         if (!$userInTeam) {
-            return response()->json(['error' => "User isn't a team member"], 403);
+            return $this->sendResponse(['error' => "User isn't a team member"], 403, userId: $authUser->id);
         }
 
         if (!TeamRole::hasHighestRole($userInTeam->permission_level_id, TeamRole::ADMINISTRATOR->value)) {
-            return response()->json(['error' => "Permission denied"], 403);
+            return $this->sendResponse(['error' => "Permission denied"], 403, userId: $authUser->id);
         }
 
         if ($sshConnection->revoked === true) {
@@ -309,8 +316,13 @@ private function clearCache($sshId, $teamId, $userId, $perPage = 30)
 
         $this->clearCache($authUser->id, $sshConnection->team_id, 30);
 
-        return response()->json([
+        $team = Teams::find($sshConnection->team_id) ?: null;
+        $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team) ?: [];
+        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
+        $this->synchronizationService->sendNotification($usersAndHisVersios);
+
+        return $this->sendResponse([
             "message" => "SSH connection revoked successfully",
-        ], 200);
+        ], 200, userId: $authUser->id);
     }
 }

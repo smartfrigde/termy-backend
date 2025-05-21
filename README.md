@@ -101,7 +101,11 @@ docker exec -it termy-laravel composer install
 ```
 docker exec -it termy-laravel php artisan migrate
 ```
-4. Enter to laravel conlose (optional)
+4. Run laravel ws
+```
+docker exec -it termy-laravel php artisan reverb:start
+```
+5. Enter to laravel conlose (optional)
 ```
 docker exec -it termy-laravel bash
 ```
