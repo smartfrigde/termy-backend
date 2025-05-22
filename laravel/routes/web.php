@@ -56,9 +56,10 @@ Route::middleware(BypassCsrfMiddleware::class)->group(function () {
         // gpg keys endpoints
         // -----------------------
         Route::prefix("keys")->group(function () {
+            Route::get('/', [KeysController::class, 'index'])->name('keys.index');
             Route::post("/", [KeysController::class, 'store'])->name('keys.store');
-            Route::delete("/", [KeysController::class, 'destroy'])->name('keys.destroy');
-            Route::patch("/", [KeysController::class, 'update'])->name('keys.update');
+            Route::delete("/{id}", [KeysController::class, 'destroy'])->name('keys.destroy');
+            Route::patch("/{id}", [KeysController::class, 'update'])->name('keys.update');
         });
     });
 });
