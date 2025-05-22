@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\GpgKeys;
 use App\Models\sshConnections;
 use App\Models\Teams;
 use App\Models\TeamsMembers;
@@ -139,11 +138,6 @@ class SshController extends Controller
             'team_id' => 'nullable|numeric|exists:teams,id',
         ]);
 
-        $gpgKeyData = $request->validate([
-            'private_key' => 'nullable|string',
-            'public_key' => 'nullable|string',
-        ]);
-
         $authUser = $this->getUserFromToken($request);
 
         $teamId = $request->input('team_id', null);
@@ -177,15 +171,6 @@ class SshController extends Controller
             return $this->sendResponse(['error' => "Failed to create SSH connection"], 500, userId: $authUser->id);
         }
 
-        $gpgKey = null;
-        if (isset($gpgKeyData['public_key']) || isset($gpgKeyData['private_key'])) {
-            $gpgKey = GpgKeys::create([
-                'private_key' => $gpgKeyData['private_key'] ?? null,
-                'public_key' => $gpgKeyData['public_key'] ?? null,
-                'ssh_connection_id' => $sshConnection->id,
-            ]);
-        }
-
         $this->clearCache($sshConnection->id, $sshData['team_id'], $authUser->id, 30);
 
         $team = Teams::find($sshData['team_id']) ?: null;
@@ -196,7 +181,6 @@ class SshController extends Controller
 
         return $this->sendResponse([
             "ssh_connection" => $sshConnection,
-            "gpg_key" => $gpgKey ?: null,
             "message" => "SSH connection and GPG key created successfully",
         ], 201, userId: $authUser->id);
     }
@@ -210,11 +194,6 @@ class SshController extends Controller
             'name' => 'nullable|string|max:255',
             'password' => 'nullable|string|max:255',
             'team_id' => 'nullable|numeric|exists:teams,id',
-        ]);
-
-        $gpgKeyData = $request->validate([
-            'private_key' => 'nullable|string',
-            'public_key' => 'nullable|string',
         ]);
 
         $authUser = $this->getUserFromToken($request);
@@ -254,23 +233,6 @@ class SshController extends Controller
 
         $sshConnection->update($sshData);
 
-        if (isset($gpgKeyData['public_key']) || isset($gpgKeyData['private_key'])) {
-            $gpgKey = $sshConnection->gpgKey;
-
-            if ($gpgKey) {
-                $gpgKey->update([
-                    'private_key' => $gpgKeyData['private_key'] ?? $gpgKey->private_key,
-                    'public_key' => $gpgKeyData['public_key'] ?? $gpgKey->public_key,
-                ]);
-            } else {
-                GpgKeys::create([
-                    'private_key' => $gpgKeyData['private_key'] ?? null,
-                    'public_key' => $gpgKeyData['public_key'] ?? null,
-                    'ssh_connection_id' => $sshConnection->id,
-                ]);
-            }
-        }
-
         $this->clearCache($authUser->id,  isset($sshData["team_id"]) ? $sshData['team_id'] : $sshConnection->team_id, 30);
 
         $team = Teams::find($sshData['team_id']) ?: null;
@@ -288,7 +250,7 @@ class SshController extends Controller
     {
         $sshConnection = sshConnections::findOrFail($sshConnectionsId);
 
-        
+
         $authUser = $this->getUserFromToken($request);
 
         if (!$sshConnection) {

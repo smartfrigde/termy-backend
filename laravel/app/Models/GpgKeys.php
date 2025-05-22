@@ -9,15 +9,20 @@ class GpgKeys extends Model
     protected $table = 'gpg_keys';
 
     protected $fillable = [
+        'user_id',
         'private_key',
         'public_key',
         'name',
         'password',
         'revoked',
     ];
-    
 
-    public function sshConnection()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function sshConnection(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(SshConnections::class);
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\KeysController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeamController;
@@ -41,12 +42,23 @@ Route::middleware(BypassCsrfMiddleware::class)->group(function () {
             Route::delete('/{id}', [TeamController::class, 'removeMember'])->name('teams.members.destroy');
         });
 
-
+        // ------------------------
+        // ssh endpoints
+        // ------------------------
         Route::prefix("ssh")->group(function () {
             Route::post('/', [SshController::class, 'store'])->name('ssh.store');
             Route::get('/', [SshController::class, 'index'])->name('ssh.index');
             Route::patch('/{id}', [SshController::class, 'update'])->name('ssh.update');
             Route::delete('/{id}', [SshController::class, 'destroy'])->name('ssh.destroy');
+        });
+
+        // -----------------------
+        // gpg keys endpoints
+        // -----------------------
+        Route::prefix("keys")->group(function () {
+            Route::post("/", [KeysController::class, 'store'])->name('keys.store');
+            Route::delete("/", [KeysController::class, 'destroy'])->name('keys.destroy');
+            Route::patch("/", [KeysController::class, 'update'])->name('keys.update');
         });
     });
 });
