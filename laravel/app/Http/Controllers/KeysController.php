@@ -8,6 +8,42 @@ use Illuminate\Support\Facades\Cache;
 
 class KeysController extends Controller
 {
+    public function clearCache($userId, $gpgKeysId, $perPage = 30): void
+    {
+
+        $page = $this->calculatePage($userId,$gpgKeysId,$perPage);
+
+
+        if ($page !== null) {
+
+            $totalPages = ceil(GpgKeys::notRevoked()->where('user_id', $userId)->count() / $perPage);
+
+            for ($currentPage = $page; $currentPage <= $totalPages; $currentPage++) {
+                Cache::forget("keys_user_{$userId}_page_{$page}_pre_{$perPage}");
+                Cache::forget("keys_user_{$userId}_page_{$page}_pre_{$perPage}");
+            }
+        }
+    }
+
+    public function calculatePage($userId, $gpgKeysId, $perPage): ?float
+    {
+        $query = GpgKeys::notRevoked()->where('user_id', $userId)
+            ->orderBy('created_at', 'desc');
+
+        $gpgKeys = $query->simplePaginate($perPage);
+
+
+        $sshIndex = $gpgKeys->getCollection()->search(function ($item) use ($gpgKeysId) {
+            return $item->id === $gpgKeysId;
+        });
+
+        if ($sshIndex === false) {
+            return null;
+        }
+
+        return ceil(($sshIndex + 1) / $perPage);
+    }
+
     public function index(Request $request)
     {
         $perPage = $request->query('perPage', 30);
@@ -68,11 +104,6 @@ class KeysController extends Controller
 
     }
 
-    public function clearCache($userId, $keyId, $perPage = 30)
-    {
-
-    }
-
     public function destroy($keyId, Request $request)
     {
         if (!$keyId) {
@@ -92,6 +123,8 @@ class KeysController extends Controller
         }
 
         $gpgKey->update(["revoked" => true]);
+
+        $this->clearCache($authUser->id, $gpgKey->id);
 
         return $this->sendResponse(["gpg key deleted successful"], 200, $authUser->id);
     }
@@ -122,6 +155,7 @@ class KeysController extends Controller
         ]);
 
         $gpgKey->update($keyData);
+        $this->clearCache($authUser->id, $gpgKey->id);
 
         return $this->sendResponse($gpgKey, 200, $authUser->id);
     }
