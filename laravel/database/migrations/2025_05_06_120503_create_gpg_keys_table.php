@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('password')->nullable();
             $table->text('public_key')->nullable();
-            $table->text('private_key');
+            $table->text('private_key')->nullable();
             $table->boolean('revoked')->default(false);
             $table->timestamps();
         });

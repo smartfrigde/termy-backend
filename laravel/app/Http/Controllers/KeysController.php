@@ -4,18 +4,39 @@ namespace App\Http\Controllers;
 
 use App\Models\GpgKeys;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class KeysController extends Controller
 {
-    public function clearCache($userId, $keyId, $perPage = 30){
-
-    }
-
-    public function index()
+    public function index(Request $request)
     {
-        //
-    }
+        $perPage = $request->query('perPage', 30);
+        $page = $request->query('page', 1);
+        $offset = ($page * $perPage) - $perPage;
 
+        $authUser = $this->getUserFromToken($request);
+
+        if (!$authUser) {
+            return response()->json([], 401);
+        }
+
+        $gpgKeys = Cache::remember("keys_user_{$authUser->id}_page_{$page}_pre_{$perPage}", 120, function () use ($page, $perPage, $authUser, $offset) {
+            return GpgKeys::notRevoked()
+                ->where('user_id', $authUser->id)
+                ->offset($offset)
+                ->limit($perPage)
+                ->get();
+        }) ?: [];
+
+        $keysCount = GpgKeys::notRevoked()->where("user_id", $authUser->id)->count() ?: 1;
+        $totalPages = ceil($keysCount / $perPage);
+
+        return $this->sendResponse([
+            'keys' => $gpgKeys,
+            'totalPages' => $totalPages,
+            'current_page' => $page,
+        ], 200, $authUser->id);
+    }
 
     public function store(Request $request)
     {
@@ -33,11 +54,11 @@ class KeysController extends Controller
             "password" => "nullable|string",
         ]);
 
-        $gpgKey = new GpgKeys([
-            "name" => $keyData["name"],
-            "public_key" => $keyData["public_key"],
-            "private_key" => $keyData["private_key"],
-            "password" => $keyData["password"],
+        $gpgKey = GpgKeys::create([
+            "name" => key_exists("name", $keyData) ? $keyData["name"] : null,
+            "public_key" => key_exists("public_key", $keyData) ? $keyData["public_key"] : null,
+            "private_key" => key_exists("private_key", $keyData) ? $keyData["private_key"] : null,
+            "password" => key_exists("password", $keyData) ? $keyData["password"] : null,
             "user_id" => $authUser->id,
         ]);
 
@@ -47,34 +68,9 @@ class KeysController extends Controller
 
     }
 
-    public function update(Request $request, $keyId)
+    public function clearCache($userId, $keyId, $perPage = 30)
     {
-        if (!$keyId) {
-            return response()->json([], 400);
-        }
 
-        $authUser = $this->getUserFromToken($request);
-
-        if (!$authUser) {
-            return response()->json([], 401);
-        }
-
-        $gpgKey = GpgKeys::where("id", $keyId)->where("user_id", $authUser->id)->first();
-
-        if (!$gpgKey) {
-            return $this->sendResponse("Gpg Key not found", 404, $authUser->id);
-        }
-
-        $keyData = $request->validate([
-            "name" => "required|string",
-            "public_key" => "required|string",
-            "private_key" => "nullable|string",
-            "password" => "nullable|string",
-        ]);
-
-        $gpgKey->update($keyData);
-
-        return $this->sendResponse($gpgKey, 200, $authUser->id);
     }
 
     public function destroy($keyId, Request $request)
@@ -97,6 +93,36 @@ class KeysController extends Controller
 
         $gpgKey->update(["revoked" => true]);
 
-        return $this->sendResponse("gpg key deleted successful", 200, $authUser->id);
+        return $this->sendResponse(["gpg key deleted successful"], 200, $authUser->id);
+    }
+
+    public function update(Request $request, $keyId)
+    {
+        if (!$keyId) {
+            return response()->json([], 400);
+        }
+
+        $authUser = $this->getUserFromToken($request);
+
+        if (!$authUser) {
+            return response()->json([], 401);
+        }
+
+        $gpgKey = GpgKeys::where("id", $keyId)->where("user_id", $authUser->id)->first();
+
+        if (!$gpgKey) {
+            return $this->sendResponse(["Gpg Key not found"], 404, $authUser->id);
+        }
+
+        $keyData = $request->validate([
+            "name" => "required|string",
+            "public_key" => "required|string",
+            "private_key" => "nullable|string",
+            "password" => "nullable|string",
+        ]);
+
+        $gpgKey->update($keyData);
+
+        return $this->sendResponse($gpgKey, 200, $authUser->id);
     }
 }
