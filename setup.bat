@@ -1,33 +1,47 @@
 @echo off
-echo Checking configuration
+setlocal enabledelayedexpansion
+
+REM 
+if not exist "app-logs" (
+    mkdir "app-logs"
+)
+
+echo INFO: Checking configuration...
 
 REM
-IF NOT EXIST .env (
-    echo The example configuration was used as configuration
-    copy /Y .env.example .env
+if not exist ".env" (
+    copy .env.example .env >nul
+    echo INFO: Created .env from .env.example
 )
 
-REM 
-IF NOT EXIST laravel\.env (
-    echo The example laravel configuration was used as configuration
-    copy /Y laravel\.env.example laravel\.env
+REM
+if not exist "laravel\.env" (
+    copy laravel\.env.example laravel\.env >nul
+    echo INFO: Created laravel/.env from laravel/.env.example
 )
 
-echo Initializing docker containers...
+echo INFO: Initializing Docker containers...
 
-REM 
-where docker-compose >nul 2>nul
-IF %ERRORLEVEL% EQU 0 (
-    echo Using docker-compose
-    docker-compose up --build --no-start
-) ELSE (
-    REM 
-    docker compose version >nul 2>nul
-    IF %ERRORLEVEL% EQU 0 (
-        echo Using docker compose
-        docker compose up --build --no-start
-    ) ELSE (
-        echo Error: Neither docker-compose nor docker compose was found. Please install Docker.
+REM
+where docker-compose >nul 2>&1
+if %errorlevel%==0 (
+    echo INFO: Using docker-compose
+    docker-compose up --build --no-start > app-logs\compose.log
+) else (
+    docker --version >nul 2>&1
+    if %errorlevel%==0 (
+        docker compose version >nul 2>&1
+        if %errorlevel%==0 (
+            echo INFO: Using docker compose
+            docker compose up --build --no-start > app-logs\compose.log
+        ) else (
+            echo ERROR: Docker Compose v2 not found. Please install it.
+            exit /b 1
+        )
+    ) else (
+        echo ERROR: Docker is not installed. Please install Docker.
         exit /b 1
     )
 )
+
+echo SUCCESS: Initialization complete.

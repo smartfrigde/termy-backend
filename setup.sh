@@ -1,26 +1,39 @@
 #!/bin/bash
 
-echo "Checking configuration"
+mkdir -p "app-logs"
+
+
+ERROR_MESSAGE='\033[0;31m'
+INFO_MESSAGE='\033[0;34m'
+SUCCESS_MESSAGE='\033[0;32m'
+NC='\033[0m'
+
+echo -e "${INFO_MESSAGE}INFO:${NC} Checking configuration..."
+
 
 if [ ! -f .env ]; then
-    echo "The example configuration was used as configuration"
     cp .env.example .env
+    echo -e "${INFO_MESSAGE}INFO:${NC} Created .env from .env.example"
 fi
+
 
 if [ ! -f laravel/.env ]; then
-    echo "The example laravel configuration was used as configuration"
     cp laravel/.env.example laravel/.env
+    echo -e "${INFO_MESSAGE}INFO:${NC} Created laravel/.env from laravel/.env.example"
 fi
 
-echo "Initializing docker containers..."
+echo -e "${INFO_MESSAGE}INFO:${NC} Initializing Docker containers..."
+
 
 if command -v docker-compose &> /dev/null; then
-    echo "Using docker-compose"
-    docker-compose up --build --no-start
+    echo -e "${INFO_MESSAGE}INFO:${NC} Using docker-compose"
+    docker-compose up --build --no-start > app-logs/compose.log
 elif command -v docker &> /dev/null && docker compose version &> /dev/null; then
-    echo "Using docker compose up --build"
-    docker compose up --build --no-start
+    echo -e "${INFO_MESSAGE}INFO:${NC} Using docker compose"
+    docker compose up --build --no-start > app-logs/compose.log
 else
-    echo "Error: Neither docker-compose nor docker compose was found. Please install Docker."
+    echo -e "${ERROR_MESSAGE}ERROR:${NC} Neither docker-compose nor docker compose was found. Please install Docker."
     exit 1
 fi
+
+echo -e "${SUCCESS_MESSAGE}SUCCESS:${NC} Initialization complete."
