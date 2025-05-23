@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\DataCategories;
 use App\Models\Teams;
 use App\Models\TeamsMembers;
 use App\TeamRole;
@@ -159,7 +160,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($team);
         $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersAndHisVersios);
+        $this->synchronizationService->sendNotification($usersAndHisVersiosm, DataCategories::team->value);
 
         $createdTeam = Teams::where("id", $team->id)
             ->with(['members' => function ($query) {
@@ -267,7 +268,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersAndHisVersios);
+        $this->synchronizationService->sendNotification($usersAndHisVersios, DataCategories::team->value);
 
         return $this->sendResponse([
             'team' => $teams,
@@ -310,7 +311,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersAndHisVersios);
+        $this->synchronizationService->sendNotification($usersAndHisVersios, DataCategories::team->value);
 
         return $this->sendResponse(['message' => 'Team deleted successfully'], 200, userId: $authUser->id);
     }
@@ -402,7 +403,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersAndHisVersios);
+        $this->synchronizationService->sendNotification($usersAndHisVersios, DataCategories::team->value);
         return $this->sendResponse([
             'member' => $newMember,
             'team' => $teams
@@ -479,7 +480,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersAndHisVersios);
+        $this->synchronizationService->sendNotification($usersAndHisVersios, DataCategories::team->value);
         return $this->sendResponse([
             'member' => $member,
         ], 200, userId: $authUser->id);
@@ -566,7 +567,7 @@ class TeamController extends Controller
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
         $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersAndHisVersios);
+        $this->synchronizationService->sendNotification($usersAndHisVersios, DataCategories::team->value);
         return $this->sendResponse(['message' => 'Member removed successfully'], 200, userId: $authUser->id);
     }
 

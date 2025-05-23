@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\DataCategories;
 use App\Models\GpgKeys;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -100,6 +101,9 @@ class KeysController extends Controller
 
         $this->clearCache($authUser->id, $gpgKey->id);
 
+        $usersAndHisVersions = $this->synchronizationService->incrementSyncVersion([ $authUser->id ]);
+        $this->synchronizationService->sendNotification($usersAndHisVersions, DataCategories::keys->value);
+
         return $this->sendResponse($gpgKey, 200, $authUser->id);
 
     }
@@ -125,6 +129,9 @@ class KeysController extends Controller
         $gpgKey->update(["revoked" => true]);
 
         $this->clearCache($authUser->id, $gpgKey->id);
+
+        $usersAndHisVersions = $this->synchronizationService->incrementSyncVersion([ $authUser->id ]);
+        $this->synchronizationService->sendNotification($usersAndHisVersions, DataCategories::keys->value);
 
         return $this->sendResponse(["gpg key deleted successful"], 200, $authUser->id);
     }
@@ -156,6 +163,9 @@ class KeysController extends Controller
 
         $gpgKey->update($keyData);
         $this->clearCache($authUser->id, $gpgKey->id);
+
+        $usersAndHisVersions = $this->synchronizationService->incrementSyncVersion([ $authUser->id ]);
+        $this->synchronizationService->sendNotification($usersAndHisVersions, DataCategories::keys->value);
 
         return $this->sendResponse($gpgKey, 200, $authUser->id);
     }

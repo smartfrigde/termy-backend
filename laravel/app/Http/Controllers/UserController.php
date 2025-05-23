@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\DataCategories;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Carbon\Carbon;
@@ -117,7 +118,7 @@ class UserController extends Controller
         ]);
 
         $usersAndHisVersions = $this->synchronizationService->incrementSyncVersion([ $user->id ]);
-        $this->synchronizationService->sendNotification($usersAndHisVersions);
+        $this->synchronizationService->sendNotification($usersAndHisVersions, DataCategories::users->value);
 
         return $this->sendResponse(['user' => $user], 200, $authUser->id);
     }
