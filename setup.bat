@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM 
+REM
 if not exist "app-logs" (
     mkdir "app-logs"
 )
