@@ -8,4 +8,6 @@ enum DataCategories: string
     case keys = "gpg_keys";
     case users = "users";
     case ssh = "ssh";
+
+    case members = "members";
 }
