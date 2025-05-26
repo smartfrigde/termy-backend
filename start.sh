@@ -30,8 +30,8 @@ fi
 read -r -p "$(echo -e "${INFO_MESSAGE}INFO:${NC} Enable Laravel websocket + queue manager? (y/n) ")" ws
 if [ "$ws" != "n" ]; then
     echo -e "${INFO_MESSAGE}INFO:${NC} Starting queue worker and Reverb..."
-    nohup docker exec termy-laravel php artisan queue:work | tee app-logs/queue.log &
-    nohup docker exec termy-laravel php artisan reverb:start | tee app-logs/reverb.log &
+    nohup docker exec termy-laravel php artisan queue:work > app-logs/queue.log 2>&1 &
+    nohup docker exec termy-laravel php artisan reverb:start > app-logs/reverb.log 2>&1 &
     echo -e "${SUCCESS_MESSAGE}SUCCESS:${NC} WebSocket and queue worker running in background."
 fi
 
