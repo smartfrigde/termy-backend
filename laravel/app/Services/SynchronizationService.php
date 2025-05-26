@@ -42,7 +42,7 @@ class SynchronizationService
         return $usersIds;
     }
 
-    public function sendNotification(array $usersData, string $categoryOfData): void
+    public function sendNotification(array $usersData, string $categoryOfData, string $otherData = ""): void
     {
         if (empty($usersData)) {
             return;
@@ -55,6 +55,7 @@ class SynchronizationService
                 'content' => 'User has new synchronization version',
                 'recipient' => $userData['user_id'],
                 "category" => $categoryOfData,
+                $otherData,
             ];
 
             event(new SyncNots($userData['user_id'], json_encode($payload)));
