@@ -15,10 +15,6 @@ if not exist ".env" (
 )
 
 REM
-if not exist "laravel\.env" (
-    copy laravel\.env.example laravel\.env >nul
-    echo INFO: Created laravel/.env from laravel/.env.example
-)
 
 echo INFO: Initializing Docker containers...
 

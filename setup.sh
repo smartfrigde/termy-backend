@@ -16,12 +16,6 @@ if [ ! -f .env ]; then
     echo -e "${INFO_MESSAGE}INFO:${NC} Created .env from .env.example"
 fi
 
-
-if [ ! -f laravel/.env ]; then
-    cp laravel/.env.example laravel/.env
-    echo -e "${INFO_MESSAGE}INFO:${NC} Created laravel/.env from laravel/.env.example"
-fi
-
 echo -e "${INFO_MESSAGE}INFO:${NC} Initializing Docker containers..."
 
 
