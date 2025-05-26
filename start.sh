@@ -16,27 +16,24 @@ echo -e "${SUCCESS_MESSAGE}SUCCESS:${NC} Servers are running."
 read -r -p "$(echo -e "${INFO_MESSAGE}INFO:${NC} Do you want to run 'composer install'? (y/n) ")" composer
 if [ "$composer" = "y" ]; then
     echo -e "${INFO_MESSAGE}INFO:${NC} Running composer install..."
-    docker exec -it termy-laravel composer install > app-logs/composer.log
+    docker exec -it termy-laravel composer install | tee app-logs/composer.log
     echo -e "${SUCCESS_MESSAGE}SUCCESS:${NC} Composer install completed."
 fi
-
 
 read -r -p "$(echo -e "${INFO_MESSAGE}INFO:${NC} Do you want to run migrations? (y/n) ")" migrate
 if [ "$migrate" = "y" ]; then
     echo -e "${INFO_MESSAGE}INFO:${NC} Running migrations in Docker..."
-    docker exec -it termy-laravel php artisan migrate > app-logs/migrate.log
+    docker exec -it termy-laravel php artisan migrate | tee app-logs/migrate.log
     echo -e "${SUCCESS_MESSAGE}SUCCESS:${NC} Migrations completed."
 fi
-
 
 read -r -p "$(echo -e "${INFO_MESSAGE}INFO:${NC} Enable Laravel websocket + queue manager? (y/n) ")" ws
 if [ "$ws" != "n" ]; then
     echo -e "${INFO_MESSAGE}INFO:${NC} Starting queue worker and Reverb..."
-    nohup docker exec termy-laravel php artisan queue:work > app-logs/queue.log 2>&1 &
-    nohup docker exec termy-laravel php artisan reverb:start > app-logs/reverb.log 2>&1 &
+    nohup docker exec termy-laravel php artisan queue:work | tee app-logs/queue.log &
+    nohup docker exec termy-laravel php artisan reverb:start | tee app-logs/reverb.log &
     echo -e "${SUCCESS_MESSAGE}SUCCESS:${NC} WebSocket and queue worker running in background."
 fi
-
 
 read -r -p "$(echo -e "${INFO_MESSAGE}INFO:${NC} Enter Laravel container shell? (y/n) ")" console
 if [ "$console" = "y" ]; then
