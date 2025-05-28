@@ -489,11 +489,11 @@ class TeamController extends Controller
 
     public function removeMember($teamId, $memberId, Request $request)
     {
-        $teams = Teams::find($teamId);
         $authUser = $this->getUserFromToken($request);
+        $teams = Teams::find($teamId);
 
         if (!$teams) {
-            return $this->sendResponse(['error' => ''], 404, userId: $authUser->id);
+            return $this->sendResponse(['error' => 'Team not found'], 404, userId: $authUser->id);
         }
 
         if ($teams->revoked) {
@@ -504,43 +504,47 @@ class TeamController extends Controller
             return $this->sendResponse(['error' => 'This team cannot be edited'], 403, userId: $authUser->id);
         }
 
-        $member = TeamsMembers::withoutRevoked()
-            ->where('user_id', $memberId)
-            ->where('team_id', $teamId)
-            ->firstOrFail();
-
-        if ($member->team_id !== $teams->id) {
-            return $this->sendResponse(['error' => 'This member does not belong to this team'], 404, userId: $authUser->id);
-        }
-
-
-        if (!$authUser) {
-            return $this->sendResponse(['error' => 'Unauthorized'], 401, userId: $authUser->id);
-        }
-
         $teamMember = TeamsMembers::where('user_id', $authUser->id)
             ->where('team_id', $teams->id)
-            ->first() ?? null;
+            ->first();
 
         if (!$teamMember) {
             return $this->sendResponse(['error' => 'You are not a member of this team'], 403, userId: $authUser->id);
         }
 
-        if (
-            $teamMember->permission_level_id !== TeamRole::OWNER->value &&
-            $teamMember->permission_level_id !== TeamRole::ADMINISTRATOR->value
-        ) {
-            return $this->sendResponse(['error' => 'Only team owners and administrators can remove members'], 403, userId: $authUser->id);
+        $member = TeamsMembers::withoutRevoked()
+            ->where('user_id', $memberId)
+            ->where('team_id', $teamId)
+            ->first();
+
+        if (!$member) {
+            return $this->sendResponse(['error' => 'This member does not belong to this team'], 404, userId: $authUser->id);
         }
 
-        if (!TeamRole::hasHighestRole($teamMember->permission_level_id, $member->permission_level_id)) {
-            return $this->sendResponse(['error' => 'You cannot remove this member'], 403, userId: $authUser->id);
+        if ($memberId !== $authUser->id) {
+            if (
+                $teamMember->permission_level_id !== TeamRole::OWNER->value &&
+                $teamMember->permission_level_id !== TeamRole::ADMINISTRATOR->value
+            ) {
+                return $this->sendResponse(['error' => 'Only team owners and administrators can remove members'], 403, userId: $authUser->id);
+            }
+
+            if (!TeamRole::hasHighestRole($teamMember->permission_level_id, $member->permission_level_id)) {
+                return $this->sendResponse(['error' => 'You cannot remove this member'], 403, userId: $authUser->id);
+            }
         }
 
-        $totalItems = TeamsMembers::withoutRevoked()->where('team_id', $teamId)->count();
+        $totalItems = TeamsMembers::withoutRevoked()
+            ->where('team_id', $teamId)
+            ->count();
 
         if ($totalItems === 1) {
-            return $this->sendResponse(["message" => "In team have to be minimal 1 member"], 403, userId: $authUser->id);
+            if ($memberId === $authUser->id) {
+
+                $teams->update(['revoked' => true]);
+            } else {
+                return $this->sendResponse(['message' => 'Team must have at least one member'], 403, userId: $authUser->id);
+            }
         }
 
         $member->update(['revoked' => true]);
@@ -550,7 +554,6 @@ class TeamController extends Controller
             ->where('team_id', $teamId)
             ->whereIn('permission_level_id', [
                 TeamRole::OWNER->value,
-                TeamRole::ADMINISTRATOR->value
             ])
             ->exists();
 
@@ -566,10 +569,17 @@ class TeamController extends Controller
         }
 
         $usersIds = $this->synchronizationService->getUsersIdsFromTeam($teams);
-        $usersAndHisVersios = $this->synchronizationService->incrementSyncVersion($usersIds);
-        $this->synchronizationService->sendNotification($usersAndHisVersios, DataCategories::members->value, ['team_id' => $teams->id]);
+        $usersAndHisVersions = $this->synchronizationService->incrementSyncVersion($usersIds);
+
+        $this->synchronizationService->sendNotification(
+            $usersAndHisVersions,
+            DataCategories::members->value,
+            ['team_id' => $teams->id]
+        );
+
         return $this->sendResponse(['message' => 'Member removed successfully'], 200, userId: $authUser->id);
     }
+
 
 
     public function getMembers(Request $request, $teamId)

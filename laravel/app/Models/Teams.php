@@ -34,7 +34,8 @@ class Teams extends Model
     public function scopeByMemberId($query, $userId)
     {
         return $query->whereHas('members', function ($subQuery) use ($userId) {
-            $subQuery->where('user_id', $userId);
+            $subQuery->where('user_id', $userId)
+                ->where('revoked', false);
         });
     }
 
@@ -48,7 +49,8 @@ class Teams extends Model
         return $query->where('type', "!=", TeamsTypesEnum::PRIVATE_USER_TEAM);
     }
 
-    public function scopeByJoinCode($query, $joinCode){
+    public function scopeByJoinCode($query, $joinCode)
+    {
         return $query->where("join_code", $joinCode);
     }
 
