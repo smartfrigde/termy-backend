@@ -30,11 +30,16 @@ class ClearDatabase extends Command
     public function handle()
     {
         $tokens = PersonalAccessToken::where('expires_at', '<', Carbon::now())->get();
-        $this->info("Downloading expires_at tokens");
+        $this->info("Downloading expires tokens");
 
-        foreach ($tokens as $token) {
-            $token->delete();
-            $this->info("Deleted token with id {$token->id} ");
+        if ($tokens->isEmpty()) {
+            $this->info("nothing to delete");
+        }else{
+            foreach ($tokens as $token) {
+                $token->delete();
+                $this->info("Deleted token with id {$token->id} ");
+            }
         }
+
     }
 }
